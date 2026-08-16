@@ -25,6 +25,7 @@ import {
   measureComponentAt,
   type ComponentSummary,
 } from './components.js';
+import { buildWallGuard } from './wall-guard.js';
 
 /** Цвет фона подложки. */
 const WHITE = 255;
@@ -130,17 +131,18 @@ export interface RemoveColoredOptions {
  */
 export function removeColored(image: RgbaImage, options: RemoveColoredOptions): RgbaImage {
   const colorMask = buildColorMask(image.data, options.saturationThreshold);
+  const inkMask = buildInkMask(image.data);
+  const guard = buildWallGuard(inkMask, image.widthPx, image.heightPx);
 
   const removal = options.haloRadiusPx > 0
     ? dilateMask(colorMask, image.widthPx, image.heightPx, options.haloRadiusPx)
     : new Uint8Array(colorMask);
 
   if (options.symbolGrowthPx > 0) {
-    const inkMask = buildInkMask(image.data);
-    growIntoInk(removal, inkMask, image.widthPx, image.heightPx, options.symbolGrowthPx);
+    growIntoInk(removal, inkMask, image.widthPx, image.heightPx, options.symbolGrowthPx, guard);
   }
 
-  return applyRemovalMask(image, removal);
+  return applyRemovalMask(image, removal, guard);
 }
 
 /** Убрать одну связную фигуру, на которую указал пользователь. */
@@ -155,6 +157,7 @@ export function removeComponentAt(
   if (column < 0 || row < 0 || column >= image.widthPx || row >= image.heightPx) return copyOf(image);
 
   const inkMask = buildInkMask(image.data);
+  const guard = buildWallGuard(inkMask, image.widthPx, image.heightPx);
   const removal = addComponentAt(
     new Uint8Array(inkMask.length),
     inkMask,
@@ -163,9 +166,10 @@ export function removeComponentAt(
     row * image.widthPx + column,
     maxShare,
     maxRadiusPx,
+    guard,
   );
 
-  return applyRemovalMask(image, removal);
+  return applyRemovalMask(image, removal, guard);
 }
 
 /** Размер фигуры под точкой — чтобы предупредить до удаления. */
@@ -179,21 +183,44 @@ export function inspectComponentAt(
   if (column < 0 || row < 0 || column >= image.widthPx || row >= image.heightPx) return null;
 
   const inkMask = buildInkMask(image.data);
+  const guard = buildWallGuard(inkMask, image.widthPx, image.heightPx);
   return measureComponentAt(
     inkMask,
     image.widthPx,
     image.heightPx,
     row * image.widthPx + column,
     maxRadiusPx,
+    guard,
   );
 }
 
-/** Закрашивает белым все точки, отмеченные в маске. */
-function applyRemovalMask(image: RgbaImage, removal: Uint8Array): RgbaImage {
+/** Цвет, которым восстанавливается стена под убранной стрелкой. */
+const WALL_INK = 31;
+
+/**
+ * Закрашивает белым точки, отмеченные к удалению.
+ *
+ * Точки стены не стираются никогда. Если стрелка проходила прямо по стене, то
+ * вместо белого такая точка красится тёмным: стрелка исчезает, а стена под ней
+ * восстанавливается сплошной.
+ */
+function applyRemovalMask(image: RgbaImage, removal: Uint8Array, guard?: Uint8Array): RgbaImage {
   const result = copyOf(image);
+
   for (let pixel = 0; pixel < removal.length; pixel += 1) {
-    if (removal[pixel] === 1) paintWhite(result.data, pixel * 4);
+    if (removal[pixel] !== 1) continue;
+
+    const index = pixel * 4;
+    if (guard !== undefined && guard[pixel] === 1) {
+      result.data[index] = WALL_INK;
+      result.data[index + 1] = WALL_INK;
+      result.data[index + 2] = WALL_INK;
+      result.data[index + 3] = 255;
+      continue;
+    }
+    paintWhite(result.data, index);
   }
+
   return result;
 }
 

@@ -1,21 +1,35 @@
 /**
- * Прорастание удаления по рисунку.
+ * Прорастание удаления по рисунку — со стенами, которые трогать нельзя.
  *
  * Значок огнетушителя на плане эвакуации — это красная заливка в чёрной рамке.
  * Убрав только красное, получаем пустую чёрную рамку: по цвету обводка от стены
  * не отличается. Поэтому удаление прорастает от цветных точек в соседний
  * рисунок и снимает обводку.
  *
- * Прорастание обязательно ограничено числом шагов. Ранняя попытка убирать
- * связную фигуру целиком приводила к тому, что стрелка, коснувшаяся стены,
- * утаскивала за собой всю стену: они образуют одну связную фигуру. С
- * ограничением стена теряет лишь несколько точек в месте касания.
+ * И тут возникала главная беда: значок примыкает к стене, прорастание уходит
+ * вдоль неё, и вместе со значком пропадает кусок стены. Ограничение числа шагов
+ * только уменьшало ущерб, но не убирало его.
+ *
+ * Настоящее решение — маска стен из wall-guard.ts. Стена отличается от обводки
+ * значка не цветом и не связностью, а тем, что она длинная и имеет продолжение
+ * в обе стороны. Такие точки помечаются заранее, и удаление через них не идёт:
+ * значок уходит, стена остаётся целой, включая закрытый значком кусок.
  */
 
 export interface ComponentSummary {
   readonly sizePx: number;
   /** Доля площади всего изображения. */
   readonly share: number;
+}
+
+/** Можно ли занимать точку: не стена и ещё не занята. */
+function isPassable(
+  pixel: number,
+  inkMask: Uint8Array,
+  guard: Uint8Array | undefined,
+): boolean {
+  if (inkMask[pixel] !== 1) return false;
+  return guard === undefined || guard[pixel] !== 1;
 }
 
 /**
@@ -30,6 +44,7 @@ export function growIntoInk(
   widthPx: number,
   heightPx: number,
   steps: number,
+  guard?: Uint8Array,
 ): Uint8Array {
   if (steps < 1) return removalMask;
 
@@ -53,10 +68,12 @@ export function growIntoInk(
           if (nx < 0 || ny < 0 || nx >= widthPx || ny >= heightPx) continue;
 
           const neighbour = ny * widthPx + nx;
-          if (inkMask[neighbour] === 1 && removalMask[neighbour] === 0) {
-            removalMask[neighbour] = 1;
-            next.push(neighbour);
-          }
+          if (removalMask[neighbour] === 1) continue;
+          // Через стену прорастание не идёт.
+          if (!isPassable(neighbour, inkMask, guard)) continue;
+
+          removalMask[neighbour] = 1;
+          next.push(neighbour);
         }
       }
     }
@@ -69,10 +86,7 @@ export function growIntoInk(
 
 /**
  * Обходит связную фигуру от заданной точки, не удаляясь дальше указанного
- * расстояния. Возвращает найденные точки.
- *
- * Ограничение по расстоянию защищает от случая, когда значок касается стены:
- * без него один щелчок снёс бы полчертежа.
+ * расстояния и не переходя через стены.
  */
 function collectComponent(
   inkMask: Uint8Array,
@@ -81,8 +95,9 @@ function collectComponent(
   start: number,
   maxRadiusPx: number,
   limit: number,
+  guard?: Uint8Array,
 ): number[] {
-  if (inkMask[start] !== 1) return [];
+  if (!isPassable(start, inkMask, guard)) return [];
 
   const startColumn = start % widthPx;
   const startRow = (start - startColumn) / widthPx;
@@ -111,10 +126,11 @@ function collectComponent(
         if (Math.abs(nx - startColumn) > maxRadiusPx || Math.abs(ny - startRow) > maxRadiusPx) continue;
 
         const neighbour = ny * widthPx + nx;
-        if (inkMask[neighbour] === 1 && visited[neighbour] === 0) {
-          visited[neighbour] = 1;
-          stack.push(neighbour);
-        }
+        if (visited[neighbour] === 1) continue;
+        if (!isPassable(neighbour, inkMask, guard)) continue;
+
+        visited[neighbour] = 1;
+        stack.push(neighbour);
       }
     }
   }
@@ -129,12 +145,13 @@ export function measureComponentAt(
   heightPx: number,
   pixel: number,
   maxRadiusPx: number,
+  guard?: Uint8Array,
 ): ComponentSummary | null {
   const totalPixels = widthPx * heightPx;
   if (pixel < 0 || pixel >= totalPixels) return null;
-  if (inkMask[pixel] !== 1) return null;
+  if (!isPassable(pixel, inkMask, guard)) return null;
 
-  const found = collectComponent(inkMask, widthPx, heightPx, pixel, maxRadiusPx, totalPixels);
+  const found = collectComponent(inkMask, widthPx, heightPx, pixel, maxRadiusPx, totalPixels, guard);
   return { sizePx: found.length, share: found.length / totalPixels };
 }
 
@@ -147,12 +164,14 @@ export function addComponentAt(
   pixel: number,
   maxShare: number,
   maxRadiusPx: number,
+  guard?: Uint8Array,
 ): Uint8Array {
   const totalPixels = widthPx * heightPx;
-  if (pixel < 0 || pixel >= totalPixels || inkMask[pixel] !== 1) return removalMask;
+  if (pixel < 0 || pixel >= totalPixels) return removalMask;
+  if (!isPassable(pixel, inkMask, guard)) return removalMask;
 
   const limit = Math.max(1, Math.floor(totalPixels * maxShare));
-  const found = collectComponent(inkMask, widthPx, heightPx, pixel, maxRadiusPx, limit);
+  const found = collectComponent(inkMask, widthPx, heightPx, pixel, maxRadiusPx, limit, guard);
 
   // Слишком крупная фигура — это стены. Молча ничего не делаем: предупреждение
   // пользователь получает в интерфейсе ещё до добавления действия.
