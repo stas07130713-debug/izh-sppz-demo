@@ -115,11 +115,12 @@ describe('удаление значка рядом со стеной', () => {
     expect(isDark(pixelAt(cleaned, 100, 21))).toBe(true);
   });
 
-  it('стрелка, проходящая по стене, убирается, а стена восстанавливается сплошной', () => {
+  it('цветной маршрут убирается, а не превращается в стену', () => {
+    // Линия маршрута такая же длинная и прямая, как стена, и по форме от неё
+    // неотличима. Отличается цветом — и по нему в защиту не попадает.
     const image = imageOf(120, 40);
-    paint(image, 5, 20, 100, 3, BLACK);
-    // Красная стрелка идёт прямо поверх стены.
-    paint(image, 50, 20, 20, 3, RED);
+    paint(image, 5, 20, 100, 3, BLACK); // стена
+    paint(image, 5, 30, 100, 3, RED); // маршрут
 
     const cleaned = removeColored(image, {
       saturationThreshold: 0.15,
@@ -127,8 +128,23 @@ describe('удаление значка рядом со стеной', () => {
       symbolGrowthPx: 6,
     });
 
-    // На месте стрелки снова стена, а не дыра.
-    expect(isDark(pixelAt(cleaned, 60, 21))).toBe(true);
-    expect(isDark(pixelAt(cleaned, 10, 21))).toBe(true);
+    expect(pixelAt(cleaned, 50, 31)).toEqual(WHITE);
+    expect(isDark(pixelAt(cleaned, 50, 21))).toBe(true);
+  });
+
+  it('защищённые точки не перекрашиваются: утолщений не появляется', () => {
+    const image = imageOf(120, 40);
+    paint(image, 5, 20, 100, 3, BLACK);
+    paint(image, 40, 12, 10, 8, RED);
+
+    const cleaned = removeColored(image, {
+      saturationThreshold: 0.15,
+      haloRadiusPx: 1,
+      symbolGrowthPx: 10,
+    });
+
+    // Над стеной, где был значок, теперь чисто — а не жирное пятно.
+    expect(pixelAt(cleaned, 45, 15)).toEqual(WHITE);
+    expect(pixelAt(cleaned, 45, 18)).toEqual(WHITE);
   });
 });

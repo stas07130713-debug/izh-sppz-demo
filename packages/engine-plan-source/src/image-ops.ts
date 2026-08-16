@@ -27,6 +27,23 @@ import {
 } from './components.js';
 import { buildWallGuard } from './wall-guard.js';
 
+/**
+ * Рисунок без цветного — основа для маски стен.
+ *
+ * Линия маршрута эвакуации тоже длинная и сплошная, поэтому по одной лишь форме
+ * она неотличима от стены и попадала под защиту: вместо того чтобы убраться,
+ * маршрут превращался в чёрную стену. Цвет как признак «это не конструкция»
+ * здесь работает, поэтому цветные точки в основу защиты не берутся.
+ */
+function structuralInk(image: RgbaImage, saturationThreshold: number): Uint8Array {
+  const ink = buildInkMask(image.data);
+  const colored = buildColorMask(image.data, saturationThreshold);
+  for (let pixel = 0; pixel < ink.length; pixel += 1) {
+    if (colored[pixel] === 1) ink[pixel] = 0;
+  }
+  return ink;
+}
+
 /** Цвет фона подложки. */
 const WHITE = 255;
 
@@ -132,7 +149,7 @@ export interface RemoveColoredOptions {
 export function removeColored(image: RgbaImage, options: RemoveColoredOptions): RgbaImage {
   const colorMask = buildColorMask(image.data, options.saturationThreshold);
   const inkMask = buildInkMask(image.data);
-  const guard = buildWallGuard(inkMask, image.widthPx, image.heightPx);
+  const guard = buildWallGuard(structuralInk(image, options.saturationThreshold), image.widthPx, image.heightPx);
 
   const removal = options.haloRadiusPx > 0
     ? dilateMask(colorMask, image.widthPx, image.heightPx, options.haloRadiusPx)
@@ -157,7 +174,7 @@ export function removeComponentAt(
   if (column < 0 || row < 0 || column >= image.widthPx || row >= image.heightPx) return copyOf(image);
 
   const inkMask = buildInkMask(image.data);
-  const guard = buildWallGuard(inkMask, image.widthPx, image.heightPx);
+  const guard = buildWallGuard(structuralInk(image, 0.15), image.widthPx, image.heightPx);
   const removal = addComponentAt(
     new Uint8Array(inkMask.length),
     inkMask,
@@ -183,7 +200,7 @@ export function inspectComponentAt(
   if (column < 0 || row < 0 || column >= image.widthPx || row >= image.heightPx) return null;
 
   const inkMask = buildInkMask(image.data);
-  const guard = buildWallGuard(inkMask, image.widthPx, image.heightPx);
+  const guard = buildWallGuard(structuralInk(image, 0.15), image.widthPx, image.heightPx);
   return measureComponentAt(
     inkMask,
     image.widthPx,
@@ -194,15 +211,11 @@ export function inspectComponentAt(
   );
 }
 
-/** Цвет, которым восстанавливается стена под убранной стрелкой. */
-const WALL_INK = 31;
-
 /**
  * Закрашивает белым точки, отмеченные к удалению.
  *
- * Точки стены не стираются никогда. Если стрелка проходила прямо по стене, то
- * вместо белого такая точка красится тёмным: стрелка исчезает, а стена под ней
- * восстанавливается сплошной.
+ * Точки стены не стираются никогда и не перекрашиваются: они остаются такими,
+ * какими были на исходном изображении.
  */
 function applyRemovalMask(image: RgbaImage, removal: Uint8Array, guard?: Uint8Array): RgbaImage {
   const result = copyOf(image);
@@ -210,15 +223,10 @@ function applyRemovalMask(image: RgbaImage, removal: Uint8Array, guard?: Uint8Ar
   for (let pixel = 0; pixel < removal.length; pixel += 1) {
     if (removal[pixel] !== 1) continue;
 
-    const index = pixel * 4;
-    if (guard !== undefined && guard[pixel] === 1) {
-      result.data[index] = WALL_INK;
-      result.data[index + 1] = WALL_INK;
-      result.data[index + 2] = WALL_INK;
-      result.data[index + 3] = 255;
-      continue;
-    }
-    paintWhite(result.data, index);
+    // Точка стены не трогается вовсе. Перекрашивать её нельзя: получаются
+    // утолщения там, где удаление подошло к стене вплотную.
+    if (guard !== undefined && guard[pixel] === 1) continue;
+    paintWhite(result.data, pixel * 4);
   }
 
   return result;
