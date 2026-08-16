@@ -26,6 +26,10 @@ export interface RedrawInput {
 
 export interface RedrawStats {
   readonly rawSegments: number;
+  /** Залитые тонкие полосы — готовые стены. */
+  readonly bars: number;
+  /** Залитые фигуры, отброшенные как не полосы: мозаика, буквы, штриховка. */
+  readonly discardedFills: number;
   readonly structuralSegments: number;
   readonly walls: number;
   readonly partitions: number;
@@ -37,10 +41,31 @@ export function buildDrawing(
   page: ExtractedPage,
   input: RedrawInput,
 ): { drawing: PlanDrawing; stats: RedrawStats } {
+  // Залитые полосы уже готовые стены: у них есть и осевая линия, и толщина.
+  const barWalls: DrawnElement[] = page.bars
+    .filter(
+      (bar) =>
+        bar.color[0] <= 70 &&
+        bar.color[1] <= 70 &&
+        bar.color[2] <= 70 &&
+        bar.a.x >= input.area.x &&
+        bar.a.x <= input.area.x + input.area.width &&
+        bar.a.y >= input.area.y &&
+        bar.a.y <= input.area.y + input.area.height,
+    )
+    .map((bar) => ({
+      id: input.makeId(),
+      kind: 'wall' as const,
+      a: bar.a,
+      b: bar.b,
+      thickness: bar.thicknessPt,
+      manual: false,
+    }));
+
   const structural = selectStructural(page.segments, input.area);
   const { walls, leftovers } = pairIntoWalls(structural, input.makeId);
   const rest = classifyLeftovers(leftovers, input.makeId);
-  const elements: DrawnElement[] = [...walls, ...rest];
+  const elements: DrawnElement[] = [...barWalls, ...walls, ...rest];
 
   return {
     drawing: {
@@ -52,8 +77,10 @@ export function buildDrawing(
     },
     stats: {
       rawSegments: page.segments.length,
+      bars: page.bars.length,
+      discardedFills: page.discardedFills,
       structuralSegments: structural.length,
-      walls: walls.length,
+      walls: barWalls.length + walls.length,
       partitions: rest.filter((element) => element.kind === 'partition').length,
       lines: rest.filter((element) => element.kind === 'line').length,
     },

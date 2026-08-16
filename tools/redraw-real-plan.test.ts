@@ -46,6 +46,24 @@ describe.skipIf(samplePath === undefined || samplePath === '')('перерисо
         rectangle: pdfjs.OPS.rectangle,
         closePath: pdfjs.OPS.closePath,
       },
+      strokePaintOps: [
+        pdfjs.OPS.stroke,
+        pdfjs.OPS.closeStroke,
+        pdfjs.OPS.fillStroke,
+        pdfjs.OPS.eoFillStroke,
+        pdfjs.OPS.closeFillStroke,
+        pdfjs.OPS.closeEOFillStroke,
+      ],
+      // Операции «залить и обвести» попадают в оба списка: движок сам решит, что
+      // из них видно на самом деле.
+      fillPaintOps: [
+        pdfjs.OPS.fill,
+        pdfjs.OPS.eoFill,
+        pdfjs.OPS.fillStroke,
+        pdfjs.OPS.eoFillStroke,
+        pdfjs.OPS.closeFillStroke,
+        pdfjs.OPS.closeEOFillStroke,
+      ],
     };
 
     // Область чертежа можно задать вручную: IZH_SAMPLE_AREA="x,y,ширина,высота".
@@ -72,7 +90,8 @@ describe.skipIf(samplePath === undefined || samplePath === '')('перерисо
     const { drawing, stats } = result.value;
     console.log('страница, пунктов:', Math.round(viewport.width), 'x', Math.round(viewport.height));
     console.log('область чертежа:', JSON.stringify(drawing.area));
-    console.log('отрезков всего:', stats.rawSegments);
+    console.log('обведённых отрезков:', stats.rawSegments);
+    console.log('залитых полос (готовые стены):', stats.bars, '| отброшено заливок:', stats.discardedFills);
     console.log('после отбора и склейки:', stats.structuralSegments);
     console.log('стен:', stats.walls, '| перегородок:', stats.partitions, '| линий:', stats.lines);
 
