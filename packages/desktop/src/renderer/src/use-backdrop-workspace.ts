@@ -13,7 +13,7 @@
 
 import { useEffect, useState } from 'react';
 import type { BackdropCleanup, PaletteEntry, PlanBackdrop, RgbaImage } from '@izh/contracts';
-import { planSourceEngine } from '@izh/engine-plan-source';
+import { planSourceEngine, scaleOperations } from '@izh/engine-plan-source';
 import { deps } from './deps';
 import { toPreviewOperations, type CleanupState } from './cleanup-state';
 
@@ -70,10 +70,18 @@ export function useOriginalPreview(backdrop: PlanBackdrop | null): {
   return { preview, palette };
 }
 
-/** Строит ссылку на изображение предпросмотра очистки. */
+/**
+ * Строит ссылку на изображение предпросмотра очистки.
+ *
+ * Действия приходят в координатах подложки полного размера, а предпросмотр
+ * считается на уменьшенной копии, поэтому они пересчитываются под её размер.
+ * Без этого стёртая область оказалась бы в предпросмотре совсем не там, где её
+ * обвели.
+ */
 export function useCleanupPreviewUrl(
   preview: RgbaImage | null,
   state: CleanupState,
+  fullWidthPx: number,
   active: boolean,
 ): string | null {
   const [url, setUrl] = useState<string | null>(null);
@@ -82,13 +90,15 @@ export function useCleanupPreviewUrl(
     let cancelled = false;
     let created: string | null = null;
 
-    if (preview === null || !active) {
+    if (preview === null || !active || fullWidthPx < 1) {
       setUrl(null);
       return;
     }
 
     void (async () => {
-      const cleaned = planSourceEngine.applyCleanup(preview, toPreviewOperations(state));
+      const factor = preview.widthPx / fullWidthPx;
+      const operations = scaleOperations(toPreviewOperations(state), factor);
+      const cleaned = planSourceEngine.applyCleanup(preview, operations);
       if (!cleaned.ok || cancelled) return;
 
       const encoded = await planSourceEngine.encodePng(cleaned.value);
@@ -106,7 +116,7 @@ export function useCleanupPreviewUrl(
       cancelled = true;
       if (created !== null) URL.revokeObjectURL(created);
     };
-  }, [preview, state, active]);
+  }, [preview, state, fullWidthPx, active]);
 
   return url;
 }

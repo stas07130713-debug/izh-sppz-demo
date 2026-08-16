@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Эталонные тесты очистки подложки и калибровки по габаритам здания.
  */
 
@@ -16,6 +16,16 @@ import {
   pdfBytes,
   type FakeEngineOptions,
 } from './test-doubles.js';
+
+/** Настройки очистки от цветного «обычной» силы — как в интерфейсе по умолчанию. */
+const REMOVE_COLORED = {
+  kind: 'remove-colored' as const,
+  saturationThreshold: 0.15,
+  haloRadiusPx: 1,
+  wholeSymbols: true,
+  minColoredShare: 0.35,
+  maxSymbolShare: 0.02,
+};
 
 function makeDeps(engineOptions: FakeEngineOptions = {}): BackdropDeps {
   return {
@@ -73,7 +83,7 @@ describe('очистка подложки', () => {
 
     await applyBackdropCleanup(deps, {
       backdropId: backdrop.id,
-      operations: [{ kind: 'remove-colored', chromaThreshold: 40 }],
+      operations: [REMOVE_COLORED],
     });
 
     const original = await deps.fileStore.get(backdrop.imageHash);
@@ -101,7 +111,7 @@ describe('очистка подложки', () => {
 
     const operations = [
       { kind: 'crop' as const, rect: { x: 0, y: 0, widthPx: 500, heightPx: 400 } },
-      { kind: 'remove-colored' as const, chromaThreshold: 40 },
+      REMOVE_COLORED,
       { kind: 'erase-rect' as const, rect: { x: 0, y: 0, widthPx: 100, heightPx: 80 } },
     ];
 
@@ -124,7 +134,7 @@ describe('очистка подложки', () => {
     // Второй раз обрезка убрана из списка — подложка обязана вернуться к полному размеру.
     const second = await applyBackdropCleanup(deps, {
       backdropId: backdrop.id,
-      operations: [{ kind: 'remove-colored', chromaThreshold: 40 }],
+      operations: [REMOVE_COLORED],
     });
 
     expect(first.ok && second.ok).toBe(true);
@@ -139,7 +149,7 @@ describe('очистка подложки', () => {
 
     await applyBackdropCleanup(deps, {
       backdropId: backdrop.id,
-      operations: [{ kind: 'remove-colored', chromaThreshold: 40 }],
+      operations: [REMOVE_COLORED],
     });
     await resetBackdropCleanup(deps, backdrop.id);
 
@@ -155,7 +165,7 @@ describe('очистка подложки', () => {
 
     const result = await applyBackdropCleanup(deps, {
       backdropId: backdrop.id,
-      operations: [{ kind: 'remove-colored', chromaThreshold: 40 }],
+      operations: [REMOVE_COLORED],
     });
 
     expect(result.ok).toBe(false);
@@ -223,3 +233,4 @@ describe('масштаб по габаритам здания', () => {
     expect(stored.value?.buildingExtents?.verticalMeters).toBe(30);
   });
 });
+

@@ -11,8 +11,8 @@
  */
 
 import type { PaletteEntry, PixelRect } from '@izh/contracts';
-import type { CleanupState } from '../cleanup-state';
-import { hasAnything } from '../cleanup-state';
+import type { CleanupState, CleanupStrength } from '../cleanup-state';
+import { STRENGTH_LABELS, hasAnything } from '../cleanup-state';
 
 export type RectPurpose = 'crop' | 'erase' | 'extents';
 
@@ -20,10 +20,12 @@ export interface CleanupPanelProps {
   readonly state: CleanupState;
   readonly palette: readonly PaletteEntry[];
   readonly drawing: RectPurpose | null;
+  readonly pickingComponents: boolean;
   readonly busy: boolean;
   readonly applied: boolean;
   readonly onChange: (next: CleanupState) => void;
   readonly onDraw: (purpose: RectPurpose | null) => void;
+  readonly onPickComponents: () => void;
   readonly onApply: () => void;
   readonly onReset: () => void;
 }
@@ -50,8 +52,8 @@ export function CleanupPanel(props: CleanupPanelProps): React.JSX.Element {
       <section>
         <h4>Убрать всё цветное</h4>
         <p className="muted small">
-          Одним движением снимает зелёные стрелки, красные значки первичных средств и цветные зоны.
-          Чёрные и серые линии здания остаются.
+          Снимает зелёные стрелки, красные значки первичных средств и цветные зоны. Убирает и бледную
+          кайму вокруг них, и чёрную обводку значков — иначе на месте значка остаётся пустая рамка.
         </p>
         <label className="checkbox">
           <input
@@ -62,16 +64,53 @@ export function CleanupPanel(props: CleanupPanelProps): React.JSX.Element {
           <span>Убирать цветное</span>
         </label>
         {state.removeColored && (
-          <label className="field">
-            <span>Порог насыщенности: {state.chromaThreshold}. Меньше — убирается больше</span>
-            <input
-              type="range"
-              min={10}
-              max={200}
-              value={state.chromaThreshold}
-              onChange={(e) => onChange({ ...state, chromaThreshold: Number(e.target.value) })}
-            />
-          </label>
+          <>
+            <div className="strength">
+              {(Object.keys(STRENGTH_LABELS) as CleanupStrength[]).map((strength) => (
+                <button
+                  key={strength}
+                  type="button"
+                  className={state.strength === strength ? 'tab active' : 'tab'}
+                  onClick={() => onChange({ ...state, strength })}
+                >
+                  {STRENGTH_LABELS[strength]}
+                </button>
+              ))}
+            </div>
+            <p className="muted small">
+              {state.strength === 'light' && 'Только явно цветное. Ничего лишнего не заденет.'}
+              {state.strength === 'normal' && 'Плюс кайма сглаживания и значки целиком, вместе с обводкой.'}
+              {state.strength === 'strong' &&
+                'Ловит бледные заливки и крупные значки. Может задеть цветные подписи, если они есть на чертеже.'}
+            </p>
+          </>
+        )}
+      </section>
+
+      <section>
+        <h4>Убрать значок щелчком</h4>
+        <p className="muted small">
+          Щёлкните по значку, стрелке или подписи — уйдёт вся фигура целиком. Работает и на
+          одноцветном чертеже, где значки нарисованы тем же чёрным, что и стены.
+        </p>
+        <button
+          type="button"
+          className={props.pickingComponents ? 'primary' : ''}
+          onClick={props.onPickComponents}
+        >
+          {props.pickingComponents ? 'Щёлкайте по лишнему — нажмите для завершения' : 'Убирать значки щелчком'}
+        </button>
+        {state.removedComponents.length > 0 && (
+          <p className="muted small">
+            Убрано фигур: {state.removedComponents.length}{' '}
+            <button
+              type="button"
+              className="link danger"
+              onClick={() => onChange({ ...state, removedComponents: [] })}
+            >
+              вернуть все
+            </button>
+          </p>
         )}
       </section>
 

@@ -24,9 +24,17 @@ import {
   createBackdropFromPdf,
   resetBackdropCleanup,
 } from '@izh/core';
-import { planSourceEngine } from '@izh/engine-plan-source';
+// inspectComponentAt не входит в контракт движка: это вспомогательный расчёт для
+// интерфейса, чтобы предупредить пользователя до удаления, а не действие над данными.
+import { inspectComponentAt, planSourceEngine } from '@izh/engine-plan-source';
 import { deps } from './deps';
-import { EMPTY_CLEANUP, fromOperations, toOperations, type CleanupState } from './cleanup-state';
+import {
+  COMPONENT_MAX_SHARE,
+  EMPTY_CLEANUP,
+  fromOperations,
+  toOperations,
+  type CleanupState,
+} from './cleanup-state';
 import { BackdropList } from './components/BackdropList';
 import { BackdropViewer, type OverlayRect, type ViewerMode } from './components/BackdropViewer';
 import { CalibrationPanel } from './components/CalibrationPanel';
@@ -54,6 +62,7 @@ export function App(): React.JSX.Element {
   const [extentsRect, setExtentsRect] = useState<PixelRect | null>(null);
   const [points, setPoints] = useState<readonly PixelPoint[]>([]);
   const [pickingPoints, setPickingPoints] = useState(false);
+  const [pickingComponents, setPickingComponents] = useState(false);
   const [pendingPdf, setPendingPdf] = useState<PendingPdf | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -63,7 +72,7 @@ export function App(): React.JSX.Element {
   const editingCleanup = tab === 'cleanup' && selected !== null;
 
   const { preview, palette } = useOriginalPreview(selected);
-  const previewUrl = useCleanupPreviewUrl(preview, cleanupState, editingCleanup);
+  const previewUrl = useCleanupPreviewUrl(preview, cleanupState, selected?.widthPx ?? 0, editingCleanup);
   const storedUrl = useStoredImageUrl(selected, cleanup);
 
   // В режиме очистки показывается предпросмотр в координатах исходной подложки,
@@ -106,6 +115,7 @@ export function App(): React.JSX.Element {
     setPoints([]);
     setDrawing(null);
     setPickingPoints(false);
+    setPickingComponents(false);
     if (selectedId === null) return;
 
     void deps.backdrops.getCalibration(selectedId).then((result) => {
@@ -193,6 +203,39 @@ export function App(): React.JSX.Element {
     setCleanupState(EMPTY_CLEANUP);
   };
 
+  /**
+   * Щелчок по значку: убрать связную фигуру целиком.
+   *
+   * Прежде чем добавить действие, фигура измеряется на уменьшенной копии. Если
+   * она оказалась слишком крупной, это не значок, а стены — тогда программа
+   * предупреждает, вместо того чтобы снести пол-чертежа.
+   */
+  const pickComponent = (point: PixelPoint): void => {
+    if (preview === null || selected === null) return;
+
+    const factor = preview.widthPx / selected.widthPx;
+    const found = inspectComponentAt(preview, {
+      x: point.x * factor,
+      y: point.y * factor,
+    });
+
+    if (found === null) {
+      setMessage('На этом месте ничего не нарисовано. Щёлкните точно по линии значка.');
+      return;
+    }
+    if (found.share > COMPONENT_MAX_SHARE) {
+      setMessage(
+        'Эта фигура слишком велика — похоже, вы попали в стены здания. Щёлкните по значку или стрелке.',
+      );
+      return;
+    }
+
+    setCleanupState((current) => ({
+      ...current,
+      removedComponents: [...current.removedComponents, point],
+    }));
+  };
+
   const handleRectDrawn = (rect: PixelRect): void => {
     if (drawing === 'crop') setCleanupState({ ...cleanupState, crop: rect });
     else if (drawing === 'erase') setCleanupState({ ...cleanupState, eraseRects: [...cleanupState.eraseRects, rect] });
@@ -242,7 +285,9 @@ export function App(): React.JSX.Element {
     await refreshList();
   };
 
-  const mode: ViewerMode = drawing !== null ? 'draw-rect' : pickingPoints ? 'pick-points' : 'pan';
+  const mode: ViewerMode =
+    drawing !== null ? 'draw-rect' : pickingPoints || pickingComponents ? 'pick-points' : 'pan';
+
   const hint =
     drawing === 'crop'
       ? 'Обведите область чертежа, которую нужно оставить'
@@ -250,9 +295,11 @@ export function App(): React.JSX.Element {
         ? 'Обведите область, которую нужно стереть'
         : drawing === 'extents'
           ? 'Обведите здание по габаритам'
-          : pickingPoints
-            ? 'Щёлкните две точки с известным расстоянием'
-            : null;
+          : pickingComponents
+            ? 'Щёлкайте по значкам и стрелкам — каждая фигура убирается целиком'
+            : pickingPoints
+              ? 'Щёлкните две точки с известным расстоянием'
+              : null;
 
   const overlays: OverlayRect[] = [];
   if (editingCleanup) {
@@ -313,7 +360,10 @@ export function App(): React.JSX.Element {
               hint={hint}
               points={points}
               overlays={overlays}
-              onPickPoint={(point) => setPoints((current) => (current.length >= 2 ? [point] : [...current, point]))}
+              onPickPoint={(point) => {
+                if (pickingComponents) pickComponent(point);
+                else setPoints((current) => (current.length >= 2 ? [point] : [...current, point]));
+              }}
               onRectDrawn={handleRectDrawn}
             />
           )}
@@ -363,10 +413,18 @@ export function App(): React.JSX.Element {
                 state={cleanupState}
                 palette={palette}
                 drawing={drawing}
+                pickingComponents={pickingComponents}
                 busy={busy}
                 applied={cleanup !== null}
                 onChange={setCleanupState}
-                onDraw={setDrawing}
+                onDraw={(purpose) => {
+                  setDrawing(purpose);
+                  setPickingComponents(false);
+                }}
+                onPickComponents={() => {
+                  setPickingComponents(!pickingComponents);
+                  setDrawing(null);
+                }}
                 onApply={() => void applyCleanup()}
                 onReset={() => void resetCleanup()}
               />

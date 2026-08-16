@@ -48,4 +48,14 @@ export {
   pixelsPerMeter,
 } from './scale-math.js';
 export { classifyPageContent } from './content-signals.js';
-export { cropImage, eraseRect, keepDark, removeColor, removeColored } from './image-ops.js';
+export {
+  cropImage,
+  eraseRect,
+  inspectComponentAt,
+  keepDark,
+  removeColor,
+  removeColored,
+  removeComponentAt,
+  scaleOperations,
+} from './image-ops.js';
+export type { ComponentSummary } from './components.js';

@@ -2,7 +2,8 @@
  * Состояние очистки в интерфейсе и сборка списка действий для ядра.
  *
  * Порядок действий важен и задаётся здесь один раз:
- *   1. стирание областей и работа с цветом — в координатах исходной подложки;
+ *   1. стирание областей, удаление значков и работа с цветом — в координатах
+ *      исходной подложки;
  *   2. обрезка — последней.
  *
  * Обрезка идёт последней намеренно. Пользователь обводит легенду и штамп на
@@ -10,7 +11,59 @@
  * Если бы обрезка выполнялась первой, все ранее указанные области уехали бы.
  */
 
-import type { CleanupOperation, PixelRect, RgbColor } from '@izh/contracts';
+import type { CleanupOperation, PixelPoint, PixelRect, RgbColor } from '@izh/contracts';
+
+/** Сила очистки от цветного. За словами стоят настройки алгоритма. */
+export type CleanupStrength = 'light' | 'normal' | 'strong';
+
+export interface ColoredPreset {
+  readonly saturationThreshold: number;
+  readonly haloRadiusPx: number;
+  readonly wholeSymbols: boolean;
+  readonly minColoredShare: number;
+  readonly maxSymbolShare: number;
+}
+
+/**
+ * Три готовые настройки вместо пяти ползунков.
+ *
+ * «Слабо» — только явно цветное, ничего лишнего не заденет.
+ * «Обычно» — плюс кайма сглаживания и значки целиком, вместе с обводкой.
+ * «Сильно» — ловит бледные заливки и крупные значки; может задеть цветные
+ * подписи, если они есть на чертеже.
+ */
+export const STRENGTH_PRESETS: Record<CleanupStrength, ColoredPreset> = {
+  light: {
+    saturationThreshold: 0.3,
+    haloRadiusPx: 0,
+    wholeSymbols: false,
+    minColoredShare: 0.5,
+    maxSymbolShare: 0.01,
+  },
+  normal: {
+    saturationThreshold: 0.15,
+    haloRadiusPx: 1,
+    wholeSymbols: true,
+    minColoredShare: 0.35,
+    maxSymbolShare: 0.02,
+  },
+  strong: {
+    saturationThreshold: 0.08,
+    haloRadiusPx: 2,
+    wholeSymbols: true,
+    minColoredShare: 0.2,
+    maxSymbolShare: 0.05,
+  },
+};
+
+export const STRENGTH_LABELS: Record<CleanupStrength, string> = {
+  light: 'Слабо',
+  normal: 'Обычно',
+  strong: 'Сильно',
+};
+
+/** Фигура крупнее этой доли площади считается зданием и щелчком не убирается. */
+export const COMPONENT_MAX_SHARE = 0.02;
 
 export interface RemovedColor {
   readonly color: RgbColor;
@@ -21,8 +74,10 @@ export interface CleanupState {
   readonly crop: PixelRect | null;
   readonly eraseRects: readonly PixelRect[];
   readonly removeColored: boolean;
-  readonly chromaThreshold: number;
+  readonly strength: CleanupStrength;
   readonly removedColors: readonly RemovedColor[];
+  /** Значки, убранные щелчком. Хранятся точки, а не результат. */
+  readonly removedComponents: readonly PixelPoint[];
   readonly keepDark: boolean;
   readonly luminanceThreshold: number;
 }
@@ -31,8 +86,9 @@ export const EMPTY_CLEANUP: CleanupState = {
   crop: null,
   eraseRects: [],
   removeColored: false,
-  chromaThreshold: 40,
+  strength: 'normal',
   removedColors: [],
+  removedComponents: [],
   keepDark: false,
   luminanceThreshold: 200,
 };
@@ -44,8 +100,11 @@ export function toOperations(state: CleanupState): CleanupOperation[] {
   for (const rect of state.eraseRects) {
     operations.push({ kind: 'erase-rect', rect });
   }
+  for (const seed of state.removedComponents) {
+    operations.push({ kind: 'remove-component', seed, maxShare: COMPONENT_MAX_SHARE });
+  }
   if (state.removeColored) {
-    operations.push({ kind: 'remove-colored', chromaThreshold: state.chromaThreshold });
+    operations.push({ kind: 'remove-colored', ...STRENGTH_PRESETS[state.strength] });
   }
   for (const removed of state.removedColors) {
     operations.push({ kind: 'remove-color', color: removed.color, tolerance: removed.tolerance });
@@ -77,6 +136,13 @@ export function hasAnything(state: CleanupState): boolean {
   return toOperations(state).length > 0;
 }
 
+/** Определяет силу очистки по сохранённым настройкам. */
+function strengthOf(preset: ColoredPreset): CleanupStrength {
+  if (preset.saturationThreshold >= 0.25) return 'light';
+  if (preset.saturationThreshold <= 0.1) return 'strong';
+  return 'normal';
+}
+
 /** Восстанавливает состояние интерфейса из сохранённого списка действий. */
 export function fromOperations(operations: readonly CleanupOperation[]): CleanupState {
   let state = EMPTY_CLEANUP;
@@ -89,8 +155,11 @@ export function fromOperations(operations: readonly CleanupOperation[]): Cleanup
       case 'erase-rect':
         state = { ...state, eraseRects: [...state.eraseRects, operation.rect] };
         break;
+      case 'remove-component':
+        state = { ...state, removedComponents: [...state.removedComponents, operation.seed] };
+        break;
       case 'remove-colored':
-        state = { ...state, removeColored: true, chromaThreshold: operation.chromaThreshold };
+        state = { ...state, removeColored: true, strength: strengthOf(operation) };
         break;
       case 'remove-color':
         state = {

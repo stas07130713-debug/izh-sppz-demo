@@ -8,8 +8,23 @@
  * чёрными линиями здания.
  */
 
-import type { CleanupOperation, PaletteEntry, PixelRect, RgbColor, Result, RgbaImage } from '@izh/contracts';
+import type {
+  CleanupOperation,
+  PaletteEntry,
+  PixelPoint,
+  PixelRect,
+  RgbColor,
+  Result,
+  RgbaImage,
+} from '@izh/contracts';
 import { err, ok } from '@izh/contracts';
+import { buildColorMask, buildInkMask, dilateMask, luminanceOf } from './color-mask.js';
+import {
+  addComponentAt,
+  addWholeColoredSymbols,
+  measureComponentAt,
+  type ComponentSummary,
+} from './components.js';
 
 /** Цвет фона подложки. */
 const WHITE = 255;
@@ -25,17 +40,6 @@ function paintWhite(data: Uint8ClampedArray, index: number): void {
   data[index + 1] = WHITE;
   data[index + 2] = WHITE;
   data[index + 3] = 255;
-}
-
-/** Насыщенность: разница между самым сильным и самым слабым каналом.
- *  У серого и чёрного она нулевая, у зелёной стрелки — большая. */
-function chromaOf(r: number, g: number, b: number): number {
-  return Math.max(r, g, b) - Math.min(r, g, b);
-}
-
-/** Воспринимаемая яркость. */
-function luminanceOf(r: number, g: number, b: number): number {
-  return 0.299 * r + 0.587 * g + 0.114 * b;
 }
 
 function copyOf(image: RgbaImage): RgbaImage {
@@ -105,24 +109,81 @@ export function removeColor(image: RgbaImage, color: RgbColor, tolerance: number
   return result;
 }
 
-/**
- * Убрать всё цветное, оставив чёрные и серые линии.
- *
- * Главное действие для планов эвакуации: зелёные стрелки, красные значки
- * первичных средств и цветные зоны уходят разом, а стены остаются.
- */
-export function removeColored(image: RgbaImage, chromaThreshold: number): RgbaImage {
-  const result = copyOf(image);
+export interface RemoveColoredOptions {
+  readonly saturationThreshold: number;
+  readonly haloRadiusPx: number;
+  readonly wholeSymbols: boolean;
+  readonly minColoredShare: number;
+  readonly maxSymbolShare: number;
+}
 
-  for (let index = 0; index < result.data.length; index += 4) {
-    const chroma = chromaOf(
-      result.data[index] ?? 0,
-      result.data[index + 1] ?? 0,
-      result.data[index + 2] ?? 0,
-    );
-    if (chroma >= chromaThreshold) paintWhite(result.data, index);
+/**
+ * Убрать всё цветное, оставив чёрные и серые линии здания.
+ *
+ * Работает в три приёма, и каждый нужен:
+ *   1. находим цветные точки по относительной насыщенности;
+ *   2. расширяем маску, чтобы снять бледную кайму сглаживания вокруг них —
+ *      иначе на месте стрелки остаётся её призрак;
+ *   3. если включено, убираем целиком те связные фигуры, которые в основном
+ *      цветные, — иначе от значка огнетушителя остаётся пустая чёрная рамка.
+ */
+export function removeColored(image: RgbaImage, options: RemoveColoredOptions): RgbaImage {
+  const colorMask = buildColorMask(image.data, options.saturationThreshold);
+
+  let removal = options.haloRadiusPx > 0
+    ? dilateMask(colorMask, image.widthPx, image.heightPx, options.haloRadiusPx)
+    : new Uint8Array(colorMask);
+
+  if (options.wholeSymbols) {
+    const inkMask = buildInkMask(image.data);
+    removal = addWholeColoredSymbols(removal, inkMask, colorMask, image.widthPx, image.heightPx, {
+      minColoredShare: options.minColoredShare,
+      maxSymbolShare: options.maxSymbolShare,
+    });
   }
 
+  return applyRemovalMask(image, removal);
+}
+
+/** Убрать одну связную фигуру, на которую указал пользователь. */
+export function removeComponentAt(
+  image: RgbaImage,
+  seed: PixelPoint,
+  maxShare: number,
+): RgbaImage {
+  const column = Math.round(seed.x);
+  const row = Math.round(seed.y);
+  if (column < 0 || row < 0 || column >= image.widthPx || row >= image.heightPx) return copyOf(image);
+
+  const inkMask = buildInkMask(image.data);
+  const removal = addComponentAt(
+    new Uint8Array(inkMask.length),
+    inkMask,
+    image.widthPx,
+    image.heightPx,
+    row * image.widthPx + column,
+    maxShare,
+  );
+
+  return applyRemovalMask(image, removal);
+}
+
+/** Размер фигуры под точкой — чтобы предупредить до удаления. */
+export function inspectComponentAt(image: RgbaImage, seed: PixelPoint): ComponentSummary | null {
+  const column = Math.round(seed.x);
+  const row = Math.round(seed.y);
+  if (column < 0 || row < 0 || column >= image.widthPx || row >= image.heightPx) return null;
+
+  const inkMask = buildInkMask(image.data);
+  return measureComponentAt(inkMask, image.widthPx, image.heightPx, row * image.widthPx + column);
+}
+
+/** Закрашивает белым все точки, отмеченные в маске. */
+function applyRemovalMask(image: RgbaImage, removal: Uint8Array): RgbaImage {
+  const result = copyOf(image);
+  for (let pixel = 0; pixel < removal.length; pixel += 1) {
+    if (removal[pixel] === 1) paintWhite(result.data, pixel * 4);
+  }
   return result;
 }
 
@@ -227,6 +288,46 @@ export function samplePalette(image: RgbaImage, maxEntries: number): readonly Pa
     }));
 }
 
+/**
+ * Пересчитывает действия под другой размер изображения.
+ *
+ * Нужно для предпросмотра: он считается на уменьшенной копии, а области и точки
+ * пользователь указывает на подложке в полном размере. Без пересчёта стёртая
+ * область в предпросмотре оказалась бы совсем не там, где её обвели.
+ */
+export function scaleOperations(
+  operations: readonly CleanupOperation[],
+  factor: number,
+): CleanupOperation[] {
+  if (factor === 1) return [...operations];
+
+  const scaleRect = (rect: PixelRect): PixelRect => ({
+    x: rect.x * factor,
+    y: rect.y * factor,
+    widthPx: rect.widthPx * factor,
+    heightPx: rect.heightPx * factor,
+  });
+
+  return operations.map((operation) => {
+    switch (operation.kind) {
+      case 'crop':
+        return { kind: 'crop', rect: scaleRect(operation.rect) };
+      case 'erase-rect':
+        return { kind: 'erase-rect', rect: scaleRect(operation.rect) };
+      case 'remove-component':
+        return {
+          ...operation,
+          seed: { x: operation.seed.x * factor, y: operation.seed.y * factor },
+        };
+      default:
+        // Действия с цветом от размера изображения не зависят: радиус каймы
+        // задан в точках и намеренно не масштабируется — на уменьшенной копии
+        // кайма тоже уже.
+        return operation;
+    }
+  });
+}
+
 /** Применяет действия очистки по порядку. */
 export function applyCleanup(
   image: RgbaImage,
@@ -252,7 +353,16 @@ export function applyCleanup(
         current = removeColor(current, operation.color, operation.tolerance);
         break;
       case 'remove-colored':
-        current = removeColored(current, operation.chromaThreshold);
+        current = removeColored(current, {
+          saturationThreshold: operation.saturationThreshold,
+          haloRadiusPx: operation.haloRadiusPx,
+          wholeSymbols: operation.wholeSymbols,
+          minColoredShare: operation.minColoredShare,
+          maxSymbolShare: operation.maxSymbolShare,
+        });
+        break;
+      case 'remove-component':
+        current = removeComponentAt(current, operation.seed, operation.maxShare);
         break;
       case 'keep-dark':
         current = keepDark(current, operation.luminanceThreshold);
