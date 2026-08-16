@@ -17,6 +17,7 @@ export * from './recognize/trace-segments.js';
 export * from './recognize/build-walls.js';
 export * from './recognize/build-model.js';
 export * from './render/render-svg.js';
+export * from './raster/wall-runs.js';
 export * from './model/geometry.js';
 export * from './model/plan-model.js';
 export * from './model/scale.js';
