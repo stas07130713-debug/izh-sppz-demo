@@ -19,4 +19,7 @@ export const CHANNELS = {
   backdropRemove: 'backdrop:remove',
   calibrationSave: 'calibration:save',
   calibrationGet: 'calibration:get',
+  cleanupSave: 'cleanup:save',
+  cleanupGet: 'cleanup:get',
+  cleanupRemove: 'cleanup:remove',
 } as const;

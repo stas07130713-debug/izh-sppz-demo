@@ -26,6 +26,9 @@ const backdrops: BackdropRepository = {
   remove: (id) => window.izh.backdrops.remove(id),
   saveCalibration: (calibration) => window.izh.backdrops.saveCalibration(calibration),
   getCalibration: (id) => window.izh.backdrops.getCalibration(id),
+  saveCleanup: (cleanup) => window.izh.backdrops.saveCleanup(cleanup),
+  getCleanup: (id) => window.izh.backdrops.getCleanup(id),
+  removeCleanup: (id) => window.izh.backdrops.removeCleanup(id),
 };
 
 const clock: Clock = {

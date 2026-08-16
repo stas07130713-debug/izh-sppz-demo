@@ -11,6 +11,7 @@ import type { PdfPageInfo } from '@izh/contracts';
 import {
   MAX_BACKDROP_SIDE_PX,
   estimateRasterSize,
+  measureByBuildingExtents,
   metersPerPixelFromDrawingScale,
   metersPerPixelFromTwoPoints,
 } from '../scale-math.js';
@@ -107,6 +108,54 @@ describe('metersPerPixelFromTwoPoints', () => {
       a: { x: 10, y: 10 },
       b: { x: 10.5, y: 10 },
       realDistanceM: 5,
+    });
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe('measureByBuildingExtents', () => {
+  it('здание 60 на 30 метров в прямоугольнике 600 на 300 точек даёт 0,1 м на точку', () => {
+    const result = measureByBuildingExtents({
+      rect: { x: 100, y: 100, widthPx: 600, heightPx: 300 },
+      horizontalMeters: 60,
+      verticalMeters: 30,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.metersPerPixel).toBeCloseTo(0.1, 10);
+    expect(result.value.discrepancyPercent).toBeCloseTo(0, 10);
+  });
+
+  it('расхождение по направлениям вычисляется и показывается', () => {
+    // По горизонтали 0,1 м на точку, по вертикали 0,11 — расхождение около 9,5 %.
+    const result = measureByBuildingExtents({
+      rect: { x: 0, y: 0, widthPx: 600, heightPx: 300 },
+      horizontalMeters: 60,
+      verticalMeters: 33,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.metersPerPixelHorizontal).toBeCloseTo(0.1, 10);
+    expect(result.value.metersPerPixelVertical).toBeCloseTo(0.11, 10);
+    expect(result.value.discrepancyPercent).toBeCloseTo(9.52, 1);
+  });
+
+  it('слишком маленький прямоугольник отклоняется', () => {
+    const result = measureByBuildingExtents({
+      rect: { x: 0, y: 0, widthPx: 8, heightPx: 8 },
+      horizontalMeters: 60,
+      verticalMeters: 30,
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it('нулевой размер здания отклоняется', () => {
+    const result = measureByBuildingExtents({
+      rect: { x: 0, y: 0, widthPx: 600, heightPx: 300 },
+      horizontalMeters: 0,
+      verticalMeters: 30,
     });
     expect(result.ok).toBe(false);
   });

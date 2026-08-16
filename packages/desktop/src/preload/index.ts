@@ -26,6 +26,9 @@ const bridge = {
     remove: (id: string) => ipcRenderer.invoke(CHANNELS.backdropRemove, id),
     saveCalibration: (calibration: unknown) => ipcRenderer.invoke(CHANNELS.calibrationSave, calibration),
     getCalibration: (id: string) => ipcRenderer.invoke(CHANNELS.calibrationGet, id),
+    saveCleanup: (cleanup: unknown) => ipcRenderer.invoke(CHANNELS.cleanupSave, cleanup),
+    getCleanup: (id: string) => ipcRenderer.invoke(CHANNELS.cleanupGet, id),
+    removeCleanup: (id: string) => ipcRenderer.invoke(CHANNELS.cleanupRemove, id),
   },
 };
 

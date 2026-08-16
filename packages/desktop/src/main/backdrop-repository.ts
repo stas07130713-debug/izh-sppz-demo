@@ -7,16 +7,23 @@
  */
 
 import { readFile, writeFile } from 'node:fs/promises';
-import type { BackdropRepository, PlanBackdrop, PlanCalibration, Result } from '@izh/contracts';
+import type {
+  BackdropCleanup,
+  BackdropRepository,
+  PlanBackdrop,
+  PlanCalibration,
+  Result,
+} from '@izh/contracts';
 import { describeUnknown, err, ok } from '@izh/contracts';
 import { backdropsFile, ensureDataDirs } from './storage-paths.js';
 
 interface StoredState {
   readonly backdrops: PlanBackdrop[];
   readonly calibrations: PlanCalibration[];
+  readonly cleanups: BackdropCleanup[];
 }
 
-const EMPTY_STATE: StoredState = { backdrops: [], calibrations: [] };
+const EMPTY_STATE: StoredState = { backdrops: [], calibrations: [], cleanups: [] };
 
 async function readState(): Promise<StoredState> {
   try {
@@ -25,6 +32,7 @@ async function readState(): Promise<StoredState> {
     return {
       backdrops: parsed.backdrops ?? [],
       calibrations: parsed.calibrations ?? [],
+      cleanups: parsed.cleanups ?? [],
     };
   } catch {
     // Файла ещё нет — это обычное состояние при первом запуске.
@@ -69,10 +77,37 @@ export function createBackdropRepository(): BackdropRepository {
         await writeState({
           backdrops: state.backdrops.filter((b) => b.id !== id),
           calibrations: state.calibrations.filter((c) => c.backdropId !== id),
+          cleanups: state.cleanups.filter((c) => c.backdropId !== id),
         });
         return ok(undefined);
       } catch (e) {
         return err('FILE_WRITE_FAILED', 'Не удалось удалить подложку.', describeUnknown(e));
+      }
+    },
+
+    async saveCleanup(cleanup: BackdropCleanup): Promise<Result<void>> {
+      try {
+        const state = await readState();
+        const others = state.cleanups.filter((c) => c.backdropId !== cleanup.backdropId);
+        await writeState({ ...state, cleanups: [...others, cleanup] });
+        return ok(undefined);
+      } catch (e) {
+        return err('FILE_WRITE_FAILED', 'Не удалось сохранить очистку подложки.', describeUnknown(e));
+      }
+    },
+
+    async getCleanup(id): Promise<Result<BackdropCleanup | null>> {
+      const state = await readState();
+      return ok(state.cleanups.find((c) => c.backdropId === id) ?? null);
+    },
+
+    async removeCleanup(id): Promise<Result<void>> {
+      try {
+        const state = await readState();
+        await writeState({ ...state, cleanups: state.cleanups.filter((c) => c.backdropId !== id) });
+        return ok(undefined);
+      } catch (e) {
+        return err('FILE_WRITE_FAILED', 'Не удалось отменить очистку.', describeUnknown(e));
       }
     },
 

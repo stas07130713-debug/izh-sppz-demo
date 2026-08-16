@@ -1,35 +1,63 @@
 /**
  * Просмотр подложки: колесо мыши приближает, перетаскивание двигает.
  *
- * Подложка показывается обычной картинкой с преобразованием, а не холстом:
- * браузер сам справляется с изображением в несколько тысяч точек по стороне, а
- * кода получается втрое меньше. Когда на подложку начнут наноситься объекты,
- * поверх картинки ляжет слой векторной графики в той же системе координат.
+ * Кроме просмотра умеет две вещи: ставить точки и обводить прямоугольники.
+ * Прямоугольниками задаются обрезка, стираемые области и габарит здания для
+ * масштаба.
+ *
+ * Все координаты, которые отсюда выходят, — точки исходного изображения
+ * подложки, а не экрана. Поэтому они не зависят ни от приближения, ни от
+ * положения окна.
  */
 
 import { useCallback, useRef, useState, type PointerEvent, type WheelEvent } from 'react';
-import type { PixelPoint } from '@izh/contracts';
+import type { PixelPoint, PixelRect } from '@izh/contracts';
+
+export type ViewerMode = 'pan' | 'pick-points' | 'draw-rect';
+
+export interface OverlayRect {
+  readonly rect: PixelRect;
+  readonly kind: 'crop' | 'erase' | 'extents';
+}
 
 export interface BackdropViewerProps {
   readonly imageUrl: string;
   readonly widthPx: number;
   readonly heightPx: number;
-  /** В режиме калибровки щелчок ставит точку, а не двигает подложку. */
-  readonly pickingPoints: boolean;
+  readonly mode: ViewerMode;
+  readonly hint: string | null;
   readonly points: readonly PixelPoint[];
+  readonly overlays: readonly OverlayRect[];
   readonly onPickPoint: (point: PixelPoint) => void;
+  readonly onRectDrawn: (rect: PixelRect) => void;
 }
 
 const MIN_ZOOM = 0.02;
 const MAX_ZOOM = 8;
 
+const OVERLAY_COLORS: Record<OverlayRect['kind'], string> = {
+  crop: '#38bdf8',
+  erase: '#f97316',
+  extents: '#22c55e',
+};
+
+function rectFromPoints(a: PixelPoint, b: PixelPoint): PixelRect {
+  return {
+    x: Math.min(a.x, b.x),
+    y: Math.min(a.y, b.y),
+    widthPx: Math.abs(b.x - a.x),
+    heightPx: Math.abs(b.y - a.y),
+  };
+}
+
 export function BackdropViewer(props: BackdropViewerProps): React.JSX.Element {
   const areaRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(0.25);
   const [offset, setOffset] = useState<PixelPoint>({ x: 40, y: 40 });
-  const dragFrom = useRef<{ pointer: PixelPoint; offset: PixelPoint } | null>(null);
+  const panFrom = useRef<{ pointer: PixelPoint; offset: PixelPoint } | null>(null);
+  const [rectFrom, setRectFrom] = useState<PixelPoint | null>(null);
+  const [rectTo, setRectTo] = useState<PixelPoint | null>(null);
 
-  /** Переводит координаты указателя в координаты точки на подложке. */
   const toImagePoint = useCallback(
     (clientX: number, clientY: number): PixelPoint => {
       const area = areaRef.current;
@@ -47,9 +75,8 @@ export function BackdropViewer(props: BackdropViewerProps): React.JSX.Element {
     const area = areaRef.current;
     if (area === null) return;
 
-    const rect = area.getBoundingClientRect();
-    const cursor = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-
+    const bounds = area.getBoundingClientRect();
+    const cursor = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
     const factor = event.deltaY < 0 ? 1.15 : 1 / 1.15;
     const nextZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
     const applied = nextZoom / zoom;
@@ -63,16 +90,31 @@ export function BackdropViewer(props: BackdropViewerProps): React.JSX.Element {
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>): void => {
-    if (props.pickingPoints) {
-      props.onPickPoint(toImagePoint(event.clientX, event.clientY));
+    const point = toImagePoint(event.clientX, event.clientY);
+
+    if (props.mode === 'pick-points') {
+      props.onPickPoint(point);
       return;
     }
+
     event.currentTarget.setPointerCapture(event.pointerId);
-    dragFrom.current = { pointer: { x: event.clientX, y: event.clientY }, offset };
+
+    if (props.mode === 'draw-rect') {
+      setRectFrom(point);
+      setRectTo(point);
+      return;
+    }
+
+    panFrom.current = { pointer: { x: event.clientX, y: event.clientY }, offset };
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>): void => {
-    const from = dragFrom.current;
+    if (props.mode === 'draw-rect' && rectFrom !== null) {
+      setRectTo(toImagePoint(event.clientX, event.clientY));
+      return;
+    }
+
+    const from = panFrom.current;
     if (from === null) return;
     setOffset({
       x: from.offset.x + (event.clientX - from.pointer.x),
@@ -81,20 +123,29 @@ export function BackdropViewer(props: BackdropViewerProps): React.JSX.Element {
   };
 
   const handlePointerUp = (): void => {
-    dragFrom.current = null;
+    if (props.mode === 'draw-rect' && rectFrom !== null && rectTo !== null) {
+      const drawn = rectFromPoints(rectFrom, rectTo);
+      if (drawn.widthPx >= 4 && drawn.heightPx >= 4) props.onRectDrawn(drawn);
+    }
+    setRectFrom(null);
+    setRectTo(null);
+    panFrom.current = null;
   };
 
   const fitToWindow = (): void => {
     const area = areaRef.current;
     if (area === null) return;
-    const rect = area.getBoundingClientRect();
-    const scale = Math.min(rect.width / props.widthPx, rect.height / props.heightPx) * 0.95;
+    const bounds = area.getBoundingClientRect();
+    const scale = Math.min(bounds.width / props.widthPx, bounds.height / props.heightPx) * 0.95;
     setZoom(scale);
     setOffset({
-      x: (rect.width - props.widthPx * scale) / 2,
-      y: (rect.height - props.heightPx * scale) / 2,
+      x: (bounds.width - props.widthPx * scale) / 2,
+      y: (bounds.height - props.heightPx * scale) / 2,
     });
   };
+
+  const pending = rectFrom !== null && rectTo !== null ? rectFromPoints(rectFrom, rectTo) : null;
+  const stroke = (value: number): number => value / zoom;
 
   return (
     <div className="viewer">
@@ -108,13 +159,13 @@ export function BackdropViewer(props: BackdropViewerProps): React.JSX.Element {
         <button type="button" onClick={fitToWindow}>
           Вписать в окно
         </button>
-        <span className="muted">Масштаб просмотра {Math.round(zoom * 100)}%</span>
-        {props.pickingPoints && <span className="hint">Щёлкните две точки с известным расстоянием</span>}
+        <span className="muted">Просмотр {Math.round(zoom * 100)}%</span>
+        {props.hint !== null && <span className="hint">{props.hint}</span>}
       </div>
 
       <div
         ref={areaRef}
-        className={props.pickingPoints ? 'viewer-area picking' : 'viewer-area'}
+        className={`viewer-area mode-${props.mode}`}
         onWheel={handleWheel}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -129,7 +180,13 @@ export function BackdropViewer(props: BackdropViewerProps): React.JSX.Element {
             height: props.heightPx,
           }}
         >
-          <img src={props.imageUrl} width={props.widthPx} height={props.heightPx} alt="Подложка плана" draggable={false} />
+          <img
+            src={props.imageUrl}
+            width={props.widthPx}
+            height={props.heightPx}
+            alt="Подложка плана"
+            draggable={false}
+          />
 
           <svg
             className="viewer-overlay"
@@ -137,6 +194,32 @@ export function BackdropViewer(props: BackdropViewerProps): React.JSX.Element {
             height={props.heightPx}
             viewBox={`0 0 ${props.widthPx} ${props.heightPx}`}
           >
+            {props.overlays.map((overlay, index) => (
+              <rect
+                key={`${overlay.kind}-${index}`}
+                x={overlay.rect.x}
+                y={overlay.rect.y}
+                width={overlay.rect.widthPx}
+                height={overlay.rect.heightPx}
+                fill={overlay.kind === 'erase' ? 'rgba(249,115,22,.18)' : 'none'}
+                stroke={OVERLAY_COLORS[overlay.kind]}
+                strokeWidth={stroke(2)}
+                strokeDasharray={overlay.kind === 'crop' ? stroke(10) : undefined}
+              />
+            ))}
+
+            {pending !== null && (
+              <rect
+                x={pending.x}
+                y={pending.y}
+                width={pending.widthPx}
+                height={pending.heightPx}
+                fill="rgba(56,189,248,.15)"
+                stroke="#38bdf8"
+                strokeWidth={stroke(2)}
+              />
+            )}
+
             {props.points.length === 2 && props.points[0] !== undefined && props.points[1] !== undefined && (
               <line
                 x1={props.points[0].x}
@@ -144,7 +227,7 @@ export function BackdropViewer(props: BackdropViewerProps): React.JSX.Element {
                 x2={props.points[1].x}
                 y2={props.points[1].y}
                 stroke="#e11d48"
-                strokeWidth={2 / zoom}
+                strokeWidth={stroke(2)}
               />
             )}
             {props.points.map((point, index) => (
@@ -152,10 +235,10 @@ export function BackdropViewer(props: BackdropViewerProps): React.JSX.Element {
                 key={`${point.x}-${point.y}-${index}`}
                 cx={point.x}
                 cy={point.y}
-                r={5 / zoom}
+                r={stroke(5)}
                 fill="#e11d48"
                 stroke="#ffffff"
-                strokeWidth={1.5 / zoom}
+                strokeWidth={stroke(1.5)}
               />
             ))}
           </svg>

@@ -8,11 +8,61 @@
  * исполнителю. Обоснование — docs/adr/ADR-003-подложка-плана.md.
  */
 
-import type { RasterizeRequest, RasterizedImage, Result } from '@izh/contracts';
+import type { RasterizeRequest, RasterizedImage, Result, RgbaImage } from '@izh/contracts';
 import { describeUnknown, err, ok } from '@izh/contracts';
 import { estimateRasterSize } from './scale-math.js';
 import { openPdfDocument } from './pdfjs-setup.js';
 import { probePdf } from './pdf-probe.js';
+
+/** Читает файл изображения в массив точек, с которым работает очистка. */
+export async function decodeImage(bytes: Uint8Array): Promise<Result<RgbaImage>> {
+  try {
+    const blob = new Blob([new Uint8Array(bytes) as BlobPart]);
+    const bitmap = await createImageBitmap(blob);
+
+    const canvas = createCanvas(bitmap.width, bitmap.height);
+    const context = canvas.getContext('2d') as
+      | OffscreenCanvasRenderingContext2D
+      | CanvasRenderingContext2D
+      | null;
+    if (context === null) {
+      bitmap.close();
+      return err('RENDER_FAILED', 'Не удалось получить холст для чтения изображения.');
+    }
+
+    context.drawImage(bitmap, 0, 0);
+    const imageData = context.getImageData(0, 0, bitmap.width, bitmap.height);
+    bitmap.close();
+
+    return ok({ widthPx: imageData.width, heightPx: imageData.height, data: imageData.data });
+  } catch (e) {
+    return err('UNSUPPORTED_FORMAT', 'Не удалось прочитать изображение.', describeUnknown(e));
+  }
+}
+
+/** Записывает массив точек обратно в файл PNG. */
+export async function encodePng(image: RgbaImage): Promise<Result<Uint8Array>> {
+  try {
+    const canvas = createCanvas(image.widthPx, image.heightPx);
+    const context = canvas.getContext('2d') as
+      | OffscreenCanvasRenderingContext2D
+      | CanvasRenderingContext2D
+      | null;
+    if (context === null) {
+      return err('RENDER_FAILED', 'Не удалось получить холст для записи изображения.');
+    }
+
+    // Копия делается в собственный буфер: ImageData принимает только массив,
+    // лежащий в обычной памяти, а не в разделяемой.
+    const buffer = new Uint8ClampedArray(image.data.length);
+    buffer.set(image.data);
+
+    context.putImageData(new ImageData(buffer, image.widthPx, image.heightPx), 0, 0);
+    return ok(await canvasToPngBytes(canvas));
+  } catch (e) {
+    return err('RENDER_FAILED', 'Не удалось сохранить изображение.', describeUnknown(e));
+  }
+}
 
 /** Создаёт холст. Предпочитается внеэкранный: он не требует вставки в страницу. */
 function createCanvas(widthPx: number, heightPx: number): OffscreenCanvas | HTMLCanvasElement {

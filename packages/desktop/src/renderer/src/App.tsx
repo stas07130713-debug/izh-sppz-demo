@@ -1,19 +1,38 @@
 /**
- * Главное окно шага 1: создание подложки плана.
+ * Главное окно: подложка плана — создание, очистка, масштаб.
  *
- * Здесь только связывание частей и состояние интерфейса. Вся содержательная
+ * Здесь только состояние интерфейса и связывание частей. Вся содержательная
  * работа — в сценариях ядра и в движке E1; этот файл не считает ничего сам.
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import type { PdfDocumentInfo, PixelPoint, PlanBackdrop, PlanCalibration, QuarterTurn } from '@izh/contracts';
-import { calibrateByDrawingScale, calibrateByTwoPoints, createBackdropFromImage, createBackdropFromPdf } from '@izh/core';
+import type {
+  BackdropCleanup,
+  PdfDocumentInfo,
+  PixelPoint,
+  PixelRect,
+  PlanBackdrop,
+  PlanCalibration,
+  QuarterTurn,
+} from '@izh/contracts';
+import {
+  applyBackdropCleanup,
+  calibrateByBuildingExtents,
+  calibrateByDrawingScale,
+  calibrateByTwoPoints,
+  createBackdropFromImage,
+  createBackdropFromPdf,
+  resetBackdropCleanup,
+} from '@izh/core';
 import { planSourceEngine } from '@izh/engine-plan-source';
 import { deps } from './deps';
+import { EMPTY_CLEANUP, fromOperations, toOperations, type CleanupState } from './cleanup-state';
 import { BackdropList } from './components/BackdropList';
-import { BackdropViewer } from './components/BackdropViewer';
+import { BackdropViewer, type OverlayRect, type ViewerMode } from './components/BackdropViewer';
 import { CalibrationPanel } from './components/CalibrationPanel';
+import { CleanupPanel, type RectPurpose } from './components/CleanupPanel';
 import { ImportWizard } from './components/ImportWizard';
+import { useCleanupPreviewUrl, useOriginalPreview, useStoredImageUrl } from './use-backdrop-workspace';
 
 interface PendingPdf {
   readonly fileName: string;
@@ -21,26 +40,45 @@ interface PendingPdf {
   readonly documentInfo: PdfDocumentInfo;
 }
 
+type InspectorTab = 'cleanup' | 'scale';
+
 export function App(): React.JSX.Element {
   const [backdrops, setBackdrops] = useState<readonly PlanBackdrop[]>([]);
   const [calibratedIds, setCalibratedIds] = useState<ReadonlySet<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [calibration, setCalibration] = useState<PlanCalibration | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [pendingPdf, setPendingPdf] = useState<PendingPdf | null>(null);
+  const [cleanup, setCleanup] = useState<BackdropCleanup | null>(null);
+  const [cleanupState, setCleanupState] = useState<CleanupState>(EMPTY_CLEANUP);
+  const [tab, setTab] = useState<InspectorTab>('cleanup');
+  const [drawing, setDrawing] = useState<RectPurpose | null>(null);
+  const [extentsRect, setExtentsRect] = useState<PixelRect | null>(null);
   const [points, setPoints] = useState<readonly PixelPoint[]>([]);
-  const [picking, setPicking] = useState(false);
+  const [pickingPoints, setPickingPoints] = useState(false);
+  const [pendingPdf, setPendingPdf] = useState<PendingPdf | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [dataDir, setDataDir] = useState<string>('');
+  const [dataDir, setDataDir] = useState('');
 
   const selected = backdrops.find((b) => b.id === selectedId) ?? null;
+  const editingCleanup = tab === 'cleanup' && selected !== null;
 
-  const refreshList = useCallback(async (): Promise<readonly PlanBackdrop[]> => {
+  const { preview, palette } = useOriginalPreview(selected);
+  const previewUrl = useCleanupPreviewUrl(preview, cleanupState, editingCleanup);
+  const storedUrl = useStoredImageUrl(selected, cleanup);
+
+  // В режиме очистки показывается предпросмотр в координатах исходной подложки,
+  // иначе — сохранённое изображение (очищенное, если очистка применена).
+  const displayUrl = editingCleanup ? (previewUrl ?? storedUrl) : storedUrl;
+  const displayWidth = editingCleanup ? (selected?.widthPx ?? 0) : (cleanup?.widthPx ?? selected?.widthPx ?? 0);
+  const displayHeight = editingCleanup
+    ? (selected?.heightPx ?? 0)
+    : (cleanup?.heightPx ?? selected?.heightPx ?? 0);
+
+  const refreshList = useCallback(async (): Promise<void> => {
     const list = await deps.backdrops.list();
     if (!list.ok) {
       setMessage(list.error.message);
-      return [];
+      return;
     }
     setBackdrops(list.value);
 
@@ -50,7 +88,6 @@ export function App(): React.JSX.Element {
       if (found.ok && found.value !== null) calibrated.add(item.id);
     }
     setCalibratedIds(calibrated);
-    return list.value;
   }, []);
 
   useEffect(() => {
@@ -60,41 +97,32 @@ export function App(): React.JSX.Element {
     });
   }, [refreshList]);
 
-  // Изображение подложки берётся из хранилища и показывается как временная ссылка.
+  // Загрузка сохранённых сведений о выбранной подложке.
   useEffect(() => {
-    if (selected === null) {
-      setImageUrl(null);
-      return;
-    }
+    setCalibration(null);
+    setCleanup(null);
+    setCleanupState(EMPTY_CLEANUP);
+    setExtentsRect(null);
+    setPoints([]);
+    setDrawing(null);
+    setPickingPoints(false);
+    if (selectedId === null) return;
 
-    let revoked: string | null = null;
-    void deps.fileStore.get(selected.imageHash).then((result) => {
-      if (!result.ok) {
-        setMessage(result.error.message);
-        return;
-      }
-      const blob = new Blob([result.value as BlobPart]);
-      const url = URL.createObjectURL(blob);
-      revoked = url;
-      setImageUrl(url);
-    });
-
-    void deps.backdrops.getCalibration(selected.id).then((result) => {
+    void deps.backdrops.getCalibration(selectedId).then((result) => {
       if (result.ok) setCalibration(result.value);
     });
-
-    return () => {
-      if (revoked !== null) URL.revokeObjectURL(revoked);
-    };
-  }, [selected]);
+    void deps.backdrops.getCleanup(selectedId).then((result) => {
+      if (result.ok && result.value !== null) {
+        setCleanup(result.value);
+        setCleanupState(fromOperations(result.value.operations));
+      }
+    });
+  }, [selectedId]);
 
   const openFile = async (): Promise<void> => {
     setMessage(null);
     const opened = await window.izh.openPlanFile();
-    if (!opened.ok) {
-      setMessage(opened.error.message);
-      return;
-    }
+    if (!opened.ok) return setMessage(opened.error.message);
     if (opened.value === null) return;
 
     const { fileName, bytes } = opened.value;
@@ -104,10 +132,7 @@ export function App(): React.JSX.Element {
       setBusy(true);
       const info = await planSourceEngine.probePdf(bytes);
       setBusy(false);
-      if (!info.ok) {
-        setMessage(info.error.message);
-        return;
-      }
+      if (!info.ok) return setMessage(info.error.message);
       setPendingPdf({ fileName, bytes, documentInfo: info.value });
       return;
     }
@@ -116,10 +141,7 @@ export function App(): React.JSX.Element {
       setBusy(true);
       const created = await createBackdropFromImage(deps, { sourceBytes: bytes, sourceFileName: fileName });
       setBusy(false);
-      if (!created.ok) {
-        setMessage(created.error.message);
-        return;
-      }
+      if (!created.ok) return setMessage(created.error.message);
       await refreshList();
       setSelectedId(created.value.id);
       return;
@@ -139,35 +161,68 @@ export function App(): React.JSX.Element {
       extraRotationDeg: rotation,
     });
     setBusy(false);
+    if (!created.ok) return setMessage(created.error.message);
 
-    if (!created.ok) {
-      setMessage(created.error.message);
-      return;
-    }
     setPendingPdf(null);
     await refreshList();
     setSelectedId(created.value.id);
   };
 
-  const pickPoint = (point: PixelPoint): void => {
-    setPoints((current) => (current.length >= 2 ? [point] : [...current, point]));
+  const applyCleanup = async (): Promise<void> => {
+    if (selected === null) return;
+    setBusy(true);
+    const result = await applyBackdropCleanup(deps, {
+      backdropId: selected.id,
+      operations: toOperations(cleanupState),
+    });
+    setBusy(false);
+    if (!result.ok) return setMessage(result.error.message);
+
+    setCleanup(result.value);
+    setDrawing(null);
+    setTab('scale');
+  };
+
+  const resetCleanup = async (): Promise<void> => {
+    if (selected === null) return;
+    setBusy(true);
+    const result = await resetBackdropCleanup(deps, selected.id);
+    setBusy(false);
+    if (!result.ok) return setMessage(result.error.message);
+    setCleanup(null);
+    setCleanupState(EMPTY_CLEANUP);
+  };
+
+  const handleRectDrawn = (rect: PixelRect): void => {
+    if (drawing === 'crop') setCleanupState({ ...cleanupState, crop: rect });
+    else if (drawing === 'erase') setCleanupState({ ...cleanupState, eraseRects: [...cleanupState.eraseRects, rect] });
+    else if (drawing === 'extents') {
+      setExtentsRect(rect);
+      setDrawing(null);
+    }
+  };
+
+  const applyExtents = async (horizontalMeters: number, verticalMeters: number): Promise<void> => {
+    if (selected === null || extentsRect === null) return;
+    const result = await calibrateByBuildingExtents(deps, {
+      backdropId: selected.id,
+      extents: { rect: extentsRect, horizontalMeters, verticalMeters },
+    });
+    if (!result.ok) return setMessage(result.error.message);
+    setCalibration(result.value);
+    await refreshList();
   };
 
   const applyTwoPoints = async (realDistanceM: number): Promise<void> => {
-    const a = points[0];
-    const b = points[1];
+    const [a, b] = points;
     if (selected === null || a === undefined || b === undefined) return;
-
     const result = await calibrateByTwoPoints(deps, {
       backdropId: selected.id,
       twoPoints: { a, b, realDistanceM },
     });
-    if (!result.ok) {
-      setMessage(result.error.message);
-      return;
-    }
+    if (!result.ok) return setMessage(result.error.message);
     setCalibration(result.value);
-    setPicking(false);
+    setPickingPoints(false);
     setPoints([]);
     await refreshList();
   };
@@ -175,23 +230,36 @@ export function App(): React.JSX.Element {
   const applyDrawingScale = async (scaleDenominator: number): Promise<void> => {
     if (selected === null) return;
     const result = await calibrateByDrawingScale(deps, { backdropId: selected.id, scaleDenominator });
-    if (!result.ok) {
-      setMessage(result.error.message);
-      return;
-    }
+    if (!result.ok) return setMessage(result.error.message);
     setCalibration(result.value);
     await refreshList();
   };
 
   const removeBackdrop = async (id: string): Promise<void> => {
     const result = await deps.backdrops.remove(id);
-    if (!result.ok) {
-      setMessage(result.error.message);
-      return;
-    }
+    if (!result.ok) return setMessage(result.error.message);
     if (selectedId === id) setSelectedId(null);
     await refreshList();
   };
+
+  const mode: ViewerMode = drawing !== null ? 'draw-rect' : pickingPoints ? 'pick-points' : 'pan';
+  const hint =
+    drawing === 'crop'
+      ? 'Обведите область чертежа, которую нужно оставить'
+      : drawing === 'erase'
+        ? 'Обведите область, которую нужно стереть'
+        : drawing === 'extents'
+          ? 'Обведите здание по габаритам'
+          : pickingPoints
+            ? 'Щёлкните две точки с известным расстоянием'
+            : null;
+
+  const overlays: OverlayRect[] = [];
+  if (editingCleanup) {
+    for (const rect of cleanupState.eraseRects) overlays.push({ rect, kind: 'erase' });
+    if (cleanupState.crop !== null) overlays.push({ rect: cleanupState.crop, kind: 'crop' });
+  }
+  if (tab === 'scale' && extentsRect !== null) overlays.push({ rect: extentsRect, kind: 'extents' });
 
   return (
     <div className="app">
@@ -200,11 +268,9 @@ export function App(): React.JSX.Element {
           <strong>ИЖ СППЗ</strong>
           <span className="muted"> — интерактивный журнал систем противопожарной защиты</span>
         </div>
-        <div className="header-actions">
-          <button type="button" className="primary" onClick={() => void openFile()} disabled={busy}>
-            Загрузить план
-          </button>
-        </div>
+        <button type="button" className="primary" onClick={() => void openFile()} disabled={busy}>
+          Загрузить план
+        </button>
       </header>
 
       {message !== null && (
@@ -220,11 +286,7 @@ export function App(): React.JSX.Element {
             items={backdrops}
             selectedId={selectedId}
             calibratedIds={calibratedIds}
-            onSelect={(id) => {
-              setSelectedId(id);
-              setPoints([]);
-              setPicking(false);
-            }}
+            onSelect={setSelectedId}
             onRemove={(id) => void removeBackdrop(id)}
           />
           <p className="muted small path">Данные хранятся в папке: {dataDir}</p>
@@ -242,14 +304,17 @@ export function App(): React.JSX.Element {
             />
           )}
 
-          {pendingPdf === null && selected !== null && imageUrl !== null && (
+          {pendingPdf === null && selected !== null && displayUrl !== null && (
             <BackdropViewer
-              imageUrl={imageUrl}
-              widthPx={selected.widthPx}
-              heightPx={selected.heightPx}
-              pickingPoints={picking}
+              imageUrl={displayUrl}
+              widthPx={displayWidth}
+              heightPx={displayHeight}
+              mode={mode}
+              hint={hint}
               points={points}
-              onPickPoint={pickPoint}
+              overlays={overlays}
+              onPickPoint={(point) => setPoints((current) => (current.length >= 2 ? [point] : [...current, point]))}
+              onRectDrawn={handleRectDrawn}
             />
           )}
 
@@ -257,12 +322,12 @@ export function App(): React.JSX.Element {
             <div className="empty">
               <h2>Подложка плана</h2>
               <p>
-                Загрузите план здания в формате PDF, PNG или JPEG. Программа сделает из него подложку,
-                на которую в дальнейшем наносится противопожарное оборудование.
+                Загрузите план здания в формате PDF, PNG или JPEG. Дальше нужно сделать две вещи:
+                очистить план, оставив только здание, и задать масштаб.
               </p>
               <p className="muted">
-                Для PDF можно выбрать страницу, разрешение и поворот. Сразу после этого нужно задать
-                масштаб — без него не считаются ни площади помещений, ни расстояния.
+                Очистка убирает стрелки эвакуации, уже расставленные значки, легенду и штамп — всё то,
+                что программа нанесёт сама и по своим правилам. Масштаб задаётся по габаритам здания.
               </p>
             </div>
           )}
@@ -270,19 +335,65 @@ export function App(): React.JSX.Element {
 
         {selected !== null && pendingPdf === null && (
           <aside className="inspector">
-            <CalibrationPanel
-              backdrop={selected}
-              calibration={calibration}
-              points={points}
-              picking={picking}
-              onStartPicking={() => {
-                setPicking(true);
-                setPoints([]);
-              }}
-              onResetPoints={() => setPoints([])}
-              onApplyTwoPoints={(distance) => void applyTwoPoints(distance)}
-              onApplyDrawingScale={(denominator) => void applyDrawingScale(denominator)}
-            />
+            <div className="tabs">
+              <button
+                type="button"
+                className={tab === 'cleanup' ? 'tab active' : 'tab'}
+                onClick={() => {
+                  setTab('cleanup');
+                  setPickingPoints(false);
+                }}
+              >
+                1. Очистка
+              </button>
+              <button
+                type="button"
+                className={tab === 'scale' ? 'tab active' : 'tab'}
+                onClick={() => {
+                  setTab('scale');
+                  setDrawing(null);
+                }}
+              >
+                2. Масштаб
+              </button>
+            </div>
+
+            {tab === 'cleanup' && (
+              <CleanupPanel
+                state={cleanupState}
+                palette={palette}
+                drawing={drawing}
+                busy={busy}
+                applied={cleanup !== null}
+                onChange={setCleanupState}
+                onDraw={setDrawing}
+                onApply={() => void applyCleanup()}
+                onReset={() => void resetCleanup()}
+              />
+            )}
+
+            {tab === 'scale' && (
+              <CalibrationPanel
+                backdrop={selected}
+                calibration={calibration}
+                extentsRect={extentsRect}
+                points={points}
+                drawingExtents={drawing === 'extents'}
+                pickingPoints={pickingPoints}
+                onDrawExtents={() => {
+                  setDrawing(drawing === 'extents' ? null : 'extents');
+                  setPickingPoints(false);
+                }}
+                onPickPoints={() => {
+                  setPickingPoints(!pickingPoints);
+                  setPoints([]);
+                  setDrawing(null);
+                }}
+                onApplyExtents={(h, v) => void applyExtents(h, v)}
+                onApplyTwoPoints={(distance) => void applyTwoPoints(distance)}
+                onApplyDrawingScale={(denominator) => void applyDrawingScale(denominator)}
+              />
+            )}
           </aside>
         )}
       </div>

@@ -112,13 +112,33 @@ input, select {
   flex: 1; position: relative; overflow: hidden; background: #0b1220;
   cursor: grab; touch-action: none;
 }
-.viewer-area.picking { cursor: crosshair; }
+.viewer-area.mode-pick-points, .viewer-area.mode-draw-rect { cursor: crosshair; }
 .viewer-content { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
 .viewer-content img { display: block; user-select: none; }
 .viewer-overlay { position: absolute; top: 0; left: 0; pointer-events: none; }
 
 section { border-top: 1px solid var(--border); padding-top: 4px; margin-top: 14px; }
 section:first-of-type { border-top: none; }
+
+.tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.tab { flex: 1; }
+.tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.checkbox { display: flex; align-items: center; gap: 8px; margin: 8px 0; cursor: pointer; }
+.checkbox input { width: auto; }
+
+.palette { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.swatch {
+  width: 52px; height: 34px; padding: 0; border-radius: 5px; border: 2px solid var(--border);
+  font-size: 10px; color: #fff; text-shadow: 0 0 3px rgba(0,0,0,.9); display: flex;
+  align-items: flex-end; justify-content: center;
+}
+.swatch.active { border-color: var(--danger); box-shadow: 0 0 0 2px rgba(239,68,68,.35); }
+
+.rect-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.rect-list li { display: flex; align-items: center; justify-content: space-between; padding: 3px 0; }
+
+input[type='range'] { padding: 0; }
 
 .crash {
   background: #0b1220; border: 1px solid var(--border); border-radius: 6px;

@@ -6,9 +6,50 @@
  * после создания подложки, одним из двух способов.
  */
 
-import type { PlanCalibration, Result, TwoPointsInput } from '@izh/contracts';
+import type { BuildingExtentsInput, PlanCalibration, Result, TwoPointsInput } from '@izh/contracts';
 import { err, ok } from '@izh/contracts';
 import type { BackdropDeps } from './backdrop-deps.js';
+
+export interface CalibrateByBuildingExtentsInput {
+  readonly backdropId: string;
+  readonly extents: BuildingExtentsInput;
+}
+
+/**
+ * Основной способ: по габаритам здания.
+ *
+ * Пользователь обводит здание прямоугольником и вводит два известных размера —
+ * по горизонтали и по вертикали. Габариты здания известны всегда, а два
+ * независимых измерения заодно проверяют сам чертёж: расхождение между
+ * направлениями означает либо ошибку ввода, либо непропорционально растянутое
+ * изображение. Расхождение сохраняется и показывается пользователю.
+ */
+export async function calibrateByBuildingExtents(
+  deps: BackdropDeps,
+  input: CalibrateByBuildingExtentsInput,
+): Promise<Result<PlanCalibration>> {
+  const backdrop = await deps.backdrops.getById(input.backdropId);
+  if (!backdrop.ok) return backdrop;
+
+  const measurement = deps.engine.measureByBuildingExtents(input.extents);
+  if (!measurement.ok) return measurement;
+
+  const calibration: PlanCalibration = {
+    backdropId: input.backdropId,
+    method: 'building-extents',
+    metersPerPixel: measurement.value.metersPerPixel,
+    twoPoints: null,
+    drawingScale: null,
+    buildingExtents: input.extents,
+    discrepancyPercent: measurement.value.discrepancyPercent,
+    createdAt: deps.clock.nowUtc(),
+  };
+
+  const saved = await deps.backdrops.saveCalibration(calibration);
+  if (!saved.ok) return saved;
+
+  return ok(calibration);
+}
 
 export interface CalibrateByTwoPointsInput {
   readonly backdropId: string;
@@ -32,6 +73,8 @@ export async function calibrateByTwoPoints(
     metersPerPixel: metersPerPixel.value,
     twoPoints: input.twoPoints,
     drawingScale: null,
+    buildingExtents: null,
+    discrepancyPercent: null,
     createdAt: deps.clock.nowUtc(),
   };
 
@@ -81,6 +124,8 @@ export async function calibrateByDrawingScale(
     metersPerPixel: metersPerPixel.value,
     twoPoints: null,
     drawingScale: { scaleDenominator: input.scaleDenominator },
+    buildingExtents: null,
+    discrepancyPercent: null,
     createdAt: deps.clock.nowUtc(),
   };
 

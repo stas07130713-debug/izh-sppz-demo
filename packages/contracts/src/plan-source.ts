@@ -16,6 +16,7 @@ import type {
   PixelRect,
   QuarterTurn,
 } from './basic-types.js';
+import type { CleanupOperation, PaletteEntry, RgbaImage } from './image.js';
 import type { Result } from './result.js';
 
 /** Что за файл загрузил пользователь. */
@@ -127,7 +128,33 @@ export interface PlanBackdrop {
 }
 
 /** Способ задания масштаба. */
-export type CalibrationMethod = 'two-points' | 'drawing-scale';
+export type CalibrationMethod = 'two-points' | 'drawing-scale' | 'building-extents';
+
+/**
+ * Калибровка по габаритам здания: пользователь обводит здание прямоугольником и
+ * вводит два известных размера — по горизонтали и по вертикали.
+ *
+ * Это основной способ. Габариты здания известны всегда, а два независимых
+ * измерения позволяют заодно проверить сам чертёж: если масштаб по горизонтали
+ * и по вертикали расходится, значит либо размеры введены неверно, либо
+ * изображение непропорционально растянуто.
+ */
+export interface BuildingExtentsInput {
+  /** Габаритный прямоугольник здания на подложке. */
+  readonly rect: PixelRect;
+  readonly horizontalMeters: number;
+  readonly verticalMeters: number;
+}
+
+/** Что получилось при измерении по габаритам. */
+export interface BuildingExtentsMeasurement {
+  /** Принятое значение — среднее по двум направлениям. */
+  readonly metersPerPixel: number;
+  readonly metersPerPixelHorizontal: number;
+  readonly metersPerPixelVertical: number;
+  /** Расхождение между направлениями в процентах. Признак ошибки или искажения. */
+  readonly discrepancyPercent: number;
+}
 
 /** Калибровка по двум точкам: пользователь указывает на плане отрезок с
  *  известной длиной, например размерную линию или габарит здания. */
@@ -152,6 +179,9 @@ export interface PlanCalibration {
   readonly metersPerPixel: number;
   readonly twoPoints: TwoPointsInput | null;
   readonly drawingScale: DrawingScaleInput | null;
+  readonly buildingExtents: BuildingExtentsInput | null;
+  /** Заполняется только для способа по габаритам здания. */
+  readonly discrepancyPercent: number | null;
   readonly createdAt: IsoDateTime;
 }
 
@@ -188,4 +218,22 @@ export interface PlanSourceEngine {
 
   /** Считает метры на пиксель по масштабу чертежа и разрешению подложки. */
   metersPerPixelFromDrawingScale(input: DrawingScaleInput, dpi: number): Result<number>;
+
+  /** Считает метры на пиксель по габаритам здания и проверяет их согласованность. */
+  measureByBuildingExtents(input: BuildingExtentsInput): Result<BuildingExtentsMeasurement>;
+
+  /** Читает изображение из файла в память. Нужен графический холст. */
+  decodeImage(bytes: Uint8Array): Promise<Result<RgbaImage>>;
+
+  /** Записывает изображение из памяти в файл PNG. Нужен графический холст. */
+  encodePng(image: RgbaImage): Promise<Result<Uint8Array>>;
+
+  /** Применяет очистку. Чистая функция: те же действия дают то же изображение. */
+  applyCleanup(image: RgbaImage, operations: readonly CleanupOperation[]): Result<RgbaImage>;
+
+  /** Уменьшает изображение — для быстрого предпросмотра очистки. */
+  downscale(image: RgbaImage, maxSidePx: number): RgbaImage;
+
+  /** Основные цвета плана. По ним пользователь выбирает, что убрать. */
+  samplePalette(image: RgbaImage, maxEntries: number): readonly PaletteEntry[];
 }

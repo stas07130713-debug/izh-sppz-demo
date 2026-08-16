@@ -11,6 +11,7 @@
  */
 
 import type { BackdropId, ContentHash, IsoDateTime } from './basic-types.js';
+import type { BackdropCleanup } from './image.js';
 import type { PlanBackdrop, PlanCalibration } from './plan-source.js';
 import type { Result } from './result.js';
 
@@ -36,6 +37,9 @@ export interface BackdropRepository {
   remove(id: BackdropId): Promise<Result<void>>;
   saveCalibration(calibration: PlanCalibration): Promise<Result<void>>;
   getCalibration(id: BackdropId): Promise<Result<PlanCalibration | null>>;
+  saveCleanup(cleanup: BackdropCleanup): Promise<Result<void>>;
+  getCleanup(id: BackdropId): Promise<Result<BackdropCleanup | null>>;
+  removeCleanup(id: BackdropId): Promise<Result<void>>;
 }
 
 /** Часы. Отдельным портом, чтобы поведение можно было воспроизвести в тестах. */

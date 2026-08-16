@@ -6,6 +6,8 @@
  */
 
 import type {
+  BuildingExtentsInput,
+  BuildingExtentsMeasurement,
   DrawingScaleInput,
   PdfPageInfo,
   QuarterTurn,
@@ -112,4 +114,50 @@ export function metersPerPixelFromDrawingScale(
  *  для рисования масштабной линейки. */
 export function pixelsPerMeter(metersPerPixel: number): number {
   return 1 / metersPerPixel;
+}
+
+/** Габаритный прямоугольник меньше этого размера для калибровки не годится:
+ *  ошибка в пару точек дала бы заметную ошибку масштаба. */
+export const MIN_EXTENTS_SIDE_PX = 20;
+
+/** Расхождение больше этого значения почти наверняка означает ошибку ввода. */
+export const EXTENTS_DISCREPANCY_WARNING_PERCENT = 2;
+
+/**
+ * Метры на пиксель по габаритам здания.
+ *
+ * Пользователь обводит здание прямоугольником и вводит два известных размера.
+ * Два независимых измерения дают не только масштаб, но и проверку: если по
+ * горизонтали и по вертикали получилось разное, значит либо размеры введены
+ * неверно, либо изображение непропорционально растянуто. Принимается среднее, а
+ * расхождение показывается пользователю.
+ */
+export function measureByBuildingExtents(
+  input: BuildingExtentsInput,
+): Result<BuildingExtentsMeasurement> {
+  if (!Number.isFinite(input.horizontalMeters) || input.horizontalMeters <= 0) {
+    return err('INVALID_ARGUMENT', 'Размер здания по горизонтали должен быть больше нуля.');
+  }
+  if (!Number.isFinite(input.verticalMeters) || input.verticalMeters <= 0) {
+    return err('INVALID_ARGUMENT', 'Размер здания по вертикали должен быть больше нуля.');
+  }
+  if (input.rect.widthPx < MIN_EXTENTS_SIDE_PX || input.rect.heightPx < MIN_EXTENTS_SIDE_PX) {
+    return err(
+      'INVALID_ARGUMENT',
+      'Габаритный прямоугольник слишком мал. Обведите здание целиком — так масштаб получится точнее.',
+    );
+  }
+
+  const metersPerPixelHorizontal = input.horizontalMeters / input.rect.widthPx;
+  const metersPerPixelVertical = input.verticalMeters / input.rect.heightPx;
+  const metersPerPixel = (metersPerPixelHorizontal + metersPerPixelVertical) / 2;
+  const discrepancyPercent =
+    (Math.abs(metersPerPixelHorizontal - metersPerPixelVertical) / metersPerPixel) * 100;
+
+  return ok({
+    metersPerPixel,
+    metersPerPixelHorizontal,
+    metersPerPixelVertical,
+    discrepancyPercent,
+  });
 }

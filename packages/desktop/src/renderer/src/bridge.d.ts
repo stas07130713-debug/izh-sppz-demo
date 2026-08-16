@@ -4,7 +4,7 @@
  * Файл только описывает типы. Сама реализация — в src/preload/index.ts.
  */
 
-import type { PlanBackdrop, PlanCalibration, Result } from '@izh/contracts';
+import type { BackdropCleanup, PlanBackdrop, PlanCalibration, Result } from '@izh/contracts';
 
 export interface OpenedPlanFile {
   readonly fileName: string;
@@ -26,6 +26,9 @@ export interface IzhBridge {
     remove(id: string): Promise<Result<void>>;
     saveCalibration(calibration: PlanCalibration): Promise<Result<void>>;
     getCalibration(id: string): Promise<Result<PlanCalibration | null>>;
+    saveCleanup(cleanup: BackdropCleanup): Promise<Result<void>>;
+    getCleanup(id: string): Promise<Result<BackdropCleanup | null>>;
+    removeCleanup(id: string): Promise<Result<void>>;
   };
 }
 

@@ -12,6 +12,7 @@
  */
 
 import type {
+  BackdropCleanup,
   BackdropRepository,
   Clock,
   ContentHash,
@@ -68,7 +69,19 @@ export function fakeFileStore(): FileStore & { readonly saved: Map<ContentHash, 
 export function fakeBackdropRepository(): BackdropRepository {
   const backdrops = new Map<string, PlanBackdrop>();
   const calibrations = new Map<string, PlanCalibration>();
+  const cleanups = new Map<string, BackdropCleanup>();
   return {
+    async saveCleanup(cleanup) {
+      cleanups.set(cleanup.backdropId, cleanup);
+      return ok(undefined);
+    },
+    async getCleanup(id) {
+      return ok(cleanups.get(id) ?? null);
+    },
+    async removeCleanup(id) {
+      cleanups.delete(id);
+      return ok(undefined);
+    },
     async save(backdrop) {
       backdrops.set(backdrop.id, backdrop);
       return ok(undefined);
@@ -99,6 +112,7 @@ export function fakeBackdropRepository(): BackdropRepository {
 export interface FakeEngineOptions {
   readonly rasterized?: RasterizedImage;
   readonly rasterizeError?: boolean;
+  readonly decodeError?: boolean;
 }
 
 /** Поддельный движок E1: подделывает всё, что требует холста и разбора PDF. */
@@ -173,6 +187,60 @@ export function fakeEngine(options: FakeEngineOptions = {}): PlanSourceEngine {
     metersPerPixelFromDrawingScale(input, dpi) {
       if (input.scaleDenominator <= 0) return err('INVALID_ARGUMENT', 'Знаменатель масштаба должен быть больше нуля.');
       return ok((0.0254 / dpi) * input.scaleDenominator);
+    },
+
+    measureByBuildingExtents(input) {
+      if (input.horizontalMeters <= 0 || input.verticalMeters <= 0) {
+        return err('INVALID_ARGUMENT', 'Размеры здания должны быть больше нуля.');
+      }
+      const metersPerPixelHorizontal = input.horizontalMeters / input.rect.widthPx;
+      const metersPerPixelVertical = input.verticalMeters / input.rect.heightPx;
+      const metersPerPixel = (metersPerPixelHorizontal + metersPerPixelVertical) / 2;
+      return ok({
+        metersPerPixel,
+        metersPerPixelHorizontal,
+        metersPerPixelVertical,
+        discrepancyPercent:
+          (Math.abs(metersPerPixelHorizontal - metersPerPixelVertical) / metersPerPixel) * 100,
+      });
+    },
+
+    // Работа с точками изображения требует холста, поэтому здесь подделывается.
+    // Правильность настоящих операций проверяется тестами самого движка.
+    async decodeImage(bytes) {
+      if (options.decodeError === true) {
+        return err('UNSUPPORTED_FORMAT', 'Подделка: изображение не читается.');
+      }
+      return ok({ widthPx: bytes.length, heightPx: 1, data: new Uint8ClampedArray(bytes.length * 4) });
+    },
+
+    async encodePng(image) {
+      // Длина результата зависит от размера, поэтому поддельный хеш будет разным
+      // для разного результата очистки — как и у настоящего хранилища.
+      return ok(new Uint8Array(image.widthPx * image.heightPx));
+    },
+
+    applyCleanup(image, operations) {
+      let widthPx = image.widthPx;
+      let heightPx = image.heightPx;
+      for (const operation of operations) {
+        if (operation.kind === 'crop') {
+          widthPx = Math.round(operation.rect.widthPx);
+          heightPx = Math.round(operation.rect.heightPx);
+        }
+      }
+      if (widthPx < 1 || heightPx < 1) {
+        return err('INVALID_ARGUMENT', 'Подделка: пустая область обрезки.');
+      }
+      return ok({ widthPx, heightPx, data: new Uint8ClampedArray(widthPx * heightPx * 4) });
+    },
+
+    downscale(image) {
+      return image;
+    },
+
+    samplePalette() {
+      return [{ color: { r: 0, g: 0, b: 0 }, share: 1 }];
     },
   };
 }

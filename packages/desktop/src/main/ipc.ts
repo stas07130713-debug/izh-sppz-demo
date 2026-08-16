@@ -12,7 +12,7 @@
 import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { BrowserWindow, dialog, ipcMain } from 'electron';
-import type { PlanBackdrop, PlanCalibration } from '@izh/contracts';
+import type { BackdropCleanup, PlanBackdrop, PlanCalibration } from '@izh/contracts';
 import { describeUnknown, err, ok } from '@izh/contracts';
 import { CHANNELS } from './channels.js';
 import { createFileStore } from './file-store.js';
@@ -70,4 +70,10 @@ export function registerIpcHandlers(): void {
     backdrops.saveCalibration(calibration),
   );
   ipcMain.handle(CHANNELS.calibrationGet, async (_event, id: string) => backdrops.getCalibration(id));
+
+  ipcMain.handle(CHANNELS.cleanupSave, async (_event, cleanup: BackdropCleanup) =>
+    backdrops.saveCleanup(cleanup),
+  );
+  ipcMain.handle(CHANNELS.cleanupGet, async (_event, id: string) => backdrops.getCleanup(id));
+  ipcMain.handle(CHANNELS.cleanupRemove, async (_event, id: string) => backdrops.removeCleanup(id));
 }
