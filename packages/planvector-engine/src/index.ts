@@ -9,6 +9,10 @@
  * самостоятельный продукт.
  */
 
+export * from './source/page-content.js';
+export * from './analyze/text-analysis.js';
+export * from './analyze/plan-area.js';
+export * from './analyze/analyze-page.js';
 export * from './model/geometry.js';
 export * from './model/plan-model.js';
 export * from './model/scale.js';
