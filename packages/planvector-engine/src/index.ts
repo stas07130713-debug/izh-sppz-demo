@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PlanVector Engine — локальное ядро реконструкции планов зданий.
  *
  * Реализуется по ТЗ PlanVector_Engine_TZ_v1.0, этапами из пункта 28.
@@ -14,8 +14,10 @@ export * from './analyze/text-analysis.js';
 export * from './analyze/plan-area.js';
 export * from './analyze/analyze-page.js';
 export * from './recognize/trace-segments.js';
+export * from './recognize/build-walls.js';
 export * from './model/geometry.js';
 export * from './model/plan-model.js';
 export * from './model/scale.js';
 export * from './model/validate.js';
 export * from './api.js';
+
