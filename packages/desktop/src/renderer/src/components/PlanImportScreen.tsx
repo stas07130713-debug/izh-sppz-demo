@@ -16,6 +16,7 @@ import {
 } from '@izh/planvector-engine';
 import { planSourceEngine } from '@izh/engine-plan-source';
 import { readPageContent } from '../planvector/pdfjs-adapter';
+import { recognizeByRaster } from '../planvector/raster-recognize';
 import { PlanCompare } from './PlanCompare';
 
 /** Разрешение отрисовки оригинала для сверки. Больше не нужно: сравнивается
@@ -62,41 +63,47 @@ export function PlanImportScreen(): React.JSX.Element {
       setStage('Разбор геометрии');
       const page = await readPageContent(document, 1);
 
-      setStage('Распознавание');
+      setStage('Распознавание по изображению');
       let counter = 0;
+      const makeId = (): string => `e${(counter += 1)}`;
+      // Векторный разбор оставлен для сведений об источнике: масштаб в тексте,
+      // область плана, признаки документа. Стены ищутся по изображению.
       const outcome = recognizeFloor({
         page,
-        source: {
-          fileName,
-          contentHash: '',
-          kind: 'pdf',
-          pageNumber: 1,
-          area: null,
-        },
+        source: { fileName, contentHash: '', kind: 'pdf', pageNumber: 1, area: null },
         createdAt: new Date().toISOString(),
-        makeId: () => `e${(counter += 1)}`,
+        makeId,
       });
 
+      const raster = await recognizeByRaster(bytes, page, makeId, fileName);
+      if ('error' in raster) {
+        setMessage(raster.error);
+        return;
+      }
+
       setStage('Отрисовка оригинала');
-      const raster = await planSourceEngine.rasterizePdfPage(bytes, {
+      const original = await planSourceEngine.rasterizePdfPage(bytes, {
         pageNumber: 1,
         dpi: COMPARE_DPI,
         extraRotationDeg: 0,
       });
       await document.destroy();
 
-      if (!raster.ok) {
-        setMessage(raster.error.message);
+      if (!original.ok) {
+        setMessage(original.error.message);
         return;
       }
 
       const originalUrl = URL.createObjectURL(
-        new Blob([new Uint8Array(raster.value.imageBytes) as BlobPart], { type: 'image/png' }),
+        new Blob([new Uint8Array(original.value.imageBytes) as BlobPart], { type: 'image/png' }),
       );
 
+      // Стены берутся из растрового распознавания, сведения об источнике — из
+      // векторного разбора: масштаб в тексте, признаки документа.
+      const merged = { ...outcome, model: raster.model };
       setResult((previous) => {
         if (previous !== null) URL.revokeObjectURL(previous.originalUrl);
-        return { outcome, page, originalUrl, fileName };
+        return { outcome: merged, page, originalUrl, fileName };
       });
     } catch (error) {
       setMessage(`Не удалось обработать документ: ${String(error)}`);
