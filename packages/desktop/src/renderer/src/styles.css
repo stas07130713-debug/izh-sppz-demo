@@ -143,6 +143,20 @@ section:first-of-type { border-top: none; }
 
 input[type='range'] { padding: 0; }
 
+/* Окно сверки распознавания */
+.viewer-area.compare { display: flex; align-items: flex-start; justify-content: center; overflow: auto; padding: 16px; }
+.compare-stack { position: relative; background: #ffffff; flex-shrink: 0; }
+.compare-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; user-select: none; }
+
+.inline-range { display: flex; align-items: center; gap: 6px; }
+.inline-range input { width: 120px; }
+
+.legend-bar { display: flex; gap: 16px; padding: 6px 12px; border-top: 1px solid var(--border); font-size: 12px; }
+.legend-bar .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+
+.facts-bar { border-top: 1px solid var(--border); background: var(--bg-panel); padding: 10px 16px; max-height: 210px; overflow-y: auto; }
+.facts-bar .facts { grid-template-columns: 190px 1fr; margin: 0; }
+
 .crash {
   background: #0b1220; border: 1px solid var(--border); border-radius: 6px;
   padding: 12px; font-size: 12px; white-space: pre-wrap; max-height: 320px; overflow: auto;

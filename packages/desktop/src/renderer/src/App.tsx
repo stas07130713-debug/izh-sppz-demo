@@ -41,6 +41,7 @@ import { BackdropViewer, type OverlayRect, type ViewerMode } from './components/
 import { CalibrationPanel } from './components/CalibrationPanel';
 import { CleanupPanel, type RectPurpose } from './components/CleanupPanel';
 import { ImportWizard } from './components/ImportWizard';
+import { PlanImportScreen } from './components/PlanImportScreen';
 import { useCleanupPreviewUrl, useOriginalPreview, useStoredImageUrl } from './use-backdrop-workspace';
 
 interface PendingPdf {
@@ -68,6 +69,8 @@ export function App(): React.JSX.Element {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [dataDir, setDataDir] = useState('');
+  /** Какой экран открыт: работа с подложкой или импорт плана через PlanVector. */
+  const [screen, setScreen] = useState<'backdrop' | 'import'>('backdrop');
 
   const selected = backdrops.find((b) => b.id === selectedId) ?? null;
   const editingCleanup = tab === 'cleanup' && selected !== null;
@@ -317,10 +320,32 @@ export function App(): React.JSX.Element {
           <strong>ИЖ СППЗ</strong>
           <span className="muted"> — интерактивный журнал систем противопожарной защиты</span>
         </div>
-        <button type="button" className="primary" onClick={() => void openFile()} disabled={busy}>
-          Загрузить план
-        </button>
+        <div className="header-actions">
+          <div className="tabs">
+            <button
+              type="button"
+              className={screen === 'backdrop' ? 'tab active' : 'tab'}
+              onClick={() => setScreen('backdrop')}
+            >
+              Подложка
+            </button>
+            <button
+              type="button"
+              className={screen === 'import' ? 'tab active' : 'tab'}
+              onClick={() => setScreen('import')}
+            >
+              Импорт плана
+            </button>
+          </div>
+          {screen === 'backdrop' && (
+            <button type="button" className="primary" onClick={() => void openFile()} disabled={busy}>
+              Загрузить план
+            </button>
+          )}
+        </div>
       </header>
+
+      {screen === 'import' && <PlanImportScreen />}
 
       {message !== null && (
         <div className="banner error" onClick={() => setMessage(null)}>
@@ -328,6 +353,7 @@ export function App(): React.JSX.Element {
         </div>
       )}
 
+      {screen === 'backdrop' && (
       <div className="app-body">
         <aside className="sidebar">
           <h3>Подложки</h3>
@@ -457,6 +483,8 @@ export function App(): React.JSX.Element {
           </aside>
         )}
       </div>
+      )}
     </div>
   );
 }
+
