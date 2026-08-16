@@ -22,4 +22,9 @@ export const CHANNELS = {
   cleanupSave: 'cleanup:save',
   cleanupGet: 'cleanup:get',
   cleanupRemove: 'cleanup:remove',
+
+  tryParams: 'try:params',
+  tryReadFile: 'try:read-file',
+  tryWrite: 'try:write',
+  tryDone: 'try:done',
 } as const;

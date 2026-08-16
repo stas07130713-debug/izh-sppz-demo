@@ -19,6 +19,12 @@ export interface IzhBridge {
     get(hash: string): Promise<Result<Uint8Array>>;
     exists(hash: string): Promise<Result<boolean>>;
   };
+  headless: {
+    params(): Promise<{ pdfPath: string; outDir: string } | null>;
+    readFile(path: string): Promise<Result<Uint8Array>>;
+    write(name: string, data: Uint8Array | string): Promise<Result<string>>;
+    done(): Promise<Result<void>>;
+  };
   backdrops: {
     save(backdrop: PlanBackdrop): Promise<Result<void>>;
     list(): Promise<Result<PlanBackdrop[]>>;

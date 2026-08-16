@@ -19,6 +19,13 @@ const bridge = {
     exists: (hash: string) => ipcRenderer.invoke(CHANNELS.storeExists, hash),
   },
 
+  headless: {
+    params: () => ipcRenderer.invoke(CHANNELS.tryParams),
+    readFile: (path: string) => ipcRenderer.invoke(CHANNELS.tryReadFile, path),
+    write: (name: string, data: Uint8Array | string) => ipcRenderer.invoke(CHANNELS.tryWrite, name, data),
+    done: () => ipcRenderer.invoke(CHANNELS.tryDone),
+  },
+
   backdrops: {
     save: (backdrop: unknown) => ipcRenderer.invoke(CHANNELS.backdropSave, backdrop),
     list: () => ipcRenderer.invoke(CHANNELS.backdropList),

@@ -24,7 +24,9 @@ function createMainWindow(): void {
     },
   });
 
-  window.once('ready-to-show', () => window.show());
+  // В безголовом прогоне окно не показывается: оно нужно только ради холста.
+  const headless = process.argv.includes('--try');
+  if (!headless) window.once('ready-to-show', () => window.show());
 
   const devServerUrl = process.env['ELECTRON_RENDERER_URL'];
   if (devServerUrl !== undefined && devServerUrl !== '') {
