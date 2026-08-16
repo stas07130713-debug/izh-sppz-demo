@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-electron/
+out/
+release/
+*.tsbuildinfo
+.vite/
+coverage/
+
+# Локальные данные пользователя (базы, подложки, вложения) — в репозиторий не попадают
+data/

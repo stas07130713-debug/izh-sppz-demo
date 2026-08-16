@@ -1,0 +1,15 @@
+{
+  "name": "@izh/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ядро: сценарии работы программы. Не знает ни о базе, ни об интерфейсе.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@izh/contracts": "0.1.0"
+  }
+}

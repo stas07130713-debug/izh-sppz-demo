@@ -1,0 +1,12 @@
+{
+  "name": "@izh/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Типы и интерфейсы. Единственное, что видят движки.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@izh/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Оболочка программы: окно, файлы, хранилище",
+  "_comment_type": "Модуль намеренно не помечен как ESM: основной процесс и мост Electron собираются в CommonJS. Так работает штатная защищённая песочница Electron и доступен __dirname. Окно программы это не затрагивает — его собирает Vite.",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview"
+  },
+  "dependencies": {
+    "@izh/contracts": "0.1.0",
+    "@izh/core": "0.1.0",
+    "@izh/engine-plan-source": "0.1.0",
+    "pdfjs-dist": "^4.9.155",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.0",
+    "electron-vite": "^2.3.0",
+    "vite": "^5.4.11"
+  }
+}
