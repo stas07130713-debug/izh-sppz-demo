@@ -29,6 +29,7 @@ import {
 import { inspectComponentAt, planSourceEngine } from '@izh/engine-plan-source';
 import { deps } from './deps';
 import {
+  COMPONENT_MAX_RADIUS_PX,
   COMPONENT_MAX_SHARE,
   EMPTY_CLEANUP,
   fromOperations,
@@ -214,10 +215,11 @@ export function App(): React.JSX.Element {
     if (preview === null || selected === null) return;
 
     const factor = preview.widthPx / selected.widthPx;
-    const found = inspectComponentAt(preview, {
-      x: point.x * factor,
-      y: point.y * factor,
-    });
+    const found = inspectComponentAt(
+      preview,
+      { x: point.x * factor, y: point.y * factor },
+      COMPONENT_MAX_RADIUS_PX * factor,
+    );
 
     if (found === null) {
       setMessage('На этом месте ничего не нарисовано. Щёлкните точно по линии значка.');

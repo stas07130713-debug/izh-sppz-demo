@@ -22,9 +22,7 @@ const REMOVE_COLORED = {
   kind: 'remove-colored' as const,
   saturationThreshold: 0.15,
   haloRadiusPx: 1,
-  wholeSymbols: true,
-  minColoredShare: 0.35,
-  maxSymbolShare: 0.02,
+  symbolGrowthPx: 6,
 };
 
 function makeDeps(engineOptions: FakeEngineOptions = {}): BackdropDeps {
@@ -233,4 +231,5 @@ describe('масштаб по габаритам здания', () => {
     expect(stored.value?.buildingExtents?.verticalMeters).toBe(30);
   });
 });
+
 

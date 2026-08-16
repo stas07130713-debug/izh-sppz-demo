@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Эталонные тесты очистки подложки.
  *
  * Изображения собираются вручную из нескольких точек, чтобы результат можно
@@ -59,9 +59,7 @@ function planStrip(): RgbaImage {
 const NORMAL = {
   saturationThreshold: 0.15,
   haloRadiusPx: 0,
-  wholeSymbols: false,
-  minColoredShare: 0.35,
-  maxSymbolShare: 0.02,
+  symbolGrowthPx: 0,
 };
 
 describe('removeColored — убрать всё цветное', () => {
@@ -116,15 +114,13 @@ describe('removeColored — убрать всё цветное', () => {
       BLACK, BLACK, BLACK, WHITE, BLACK,
     ]);
 
-    const partial = removeColored(image, { ...NORMAL, wholeSymbols: false });
+    const partial = removeColored(image, { ...NORMAL, symbolGrowthPx: 0 });
     // Без разбора фигур от значка остаётся пустая рамка.
     expect(pixelAt(partial, 0, 0)).toEqual(BLACK);
 
     const whole = removeColored(image, {
       ...NORMAL,
-      wholeSymbols: true,
-      minColoredShare: 0.1,
-      maxSymbolShare: 0.9,
+      symbolGrowthPx: 3,
     });
     expect(pixelAt(whole, 0, 0)).toEqual(WHITE);
     expect(pixelAt(whole, 1, 1)).toEqual(WHITE);
@@ -132,19 +128,26 @@ describe('removeColored — убрать всё цветное', () => {
     expect(pixelAt(whole, 4, 1)).toEqual(BLACK);
   });
 
-  it('крупная фигура считается зданием и целиком не убирается', () => {
-    const image = imageOf(3, 1, [BLACK, RED, BLACK]);
-    const cleaned = removeColored(image, {
-      ...NORMAL,
-      wholeSymbols: true,
-      minColoredShare: 0.1,
-      // Фигура занимает весь рисунок, а порог мал — значит это здание.
-      maxSymbolShare: 0.1,
-    });
-    expect(pixelAt(cleaned, 0, 0)).toEqual(BLACK);
-    expect(pixelAt(cleaned, 2, 0)).toEqual(BLACK);
-    // Сама цветная точка убирается всегда, независимо от разбора фигур.
-    expect(pixelAt(cleaned, 1, 0)).toEqual(WHITE);
+  it('стена, которой касается стрелка, теряет только место касания', () => {
+    // Ровно тот случай, на который пожаловался заказчик: раньше связная фигура
+    // убиралась целиком, и вместе со стрелкой уходила вся стена.
+    // Длинная чёрная стена, к её началу примыкает зелёная стрелка.
+    const wall = new Array<RgbColor>(12).fill(BLACK);
+    const image = imageOf(13, 1, [GREEN, ...wall]);
+
+    const cleaned = removeColored(image, { ...NORMAL, symbolGrowthPx: 2 });
+
+    expect(pixelAt(cleaned, 0, 0)).toEqual(WHITE); // стрелка убрана
+    expect(pixelAt(cleaned, 1, 0)).toEqual(WHITE); // и два шага стены рядом с ней
+    expect(pixelAt(cleaned, 2, 0)).toEqual(WHITE);
+    expect(pixelAt(cleaned, 3, 0)).toEqual(BLACK); // дальше стена цела
+    expect(pixelAt(cleaned, 12, 0)).toEqual(BLACK);
+  });
+
+  it('без прорастания стена не страдает вовсе', () => {
+    const image = imageOf(4, 1, [GREEN, BLACK, BLACK, BLACK]);
+    const cleaned = removeColored(image, { ...NORMAL, symbolGrowthPx: 0 });
+    expect(pixelAt(cleaned, 1, 0)).toEqual(BLACK);
   });
 });
 
@@ -152,7 +155,7 @@ describe('removeComponentAt — убрать значок щелчком', () =>
   it('убирает связную фигуру целиком, даже одноцветную', () => {
     // Одноцветный чертёж: значок нарисован тем же чёрным, что и стена.
     const image = imageOf(5, 1, [BLACK, BLACK, WHITE, BLACK, BLACK]);
-    const cleaned = removeComponentAt(image, { x: 0, y: 0 }, 0.9);
+    const cleaned = removeComponentAt(image, { x: 0, y: 0 }, 0.9, 100);
 
     expect(pixelAt(cleaned, 0, 0)).toEqual(WHITE);
     expect(pixelAt(cleaned, 1, 0)).toEqual(WHITE);
@@ -162,13 +165,25 @@ describe('removeComponentAt — убрать значок щелчком', () =>
 
   it('слишком крупную фигуру не трогает: это стены', () => {
     const image = imageOf(4, 1, [BLACK, BLACK, BLACK, BLACK]);
-    const cleaned = removeComponentAt(image, { x: 0, y: 0 }, 0.2);
+    const cleaned = removeComponentAt(image, { x: 0, y: 0 }, 0.2, 100);
     expect(pixelAt(cleaned, 0, 0)).toEqual(BLACK);
+  });
+
+  it('удаление не уходит дальше заданного расстояния от щелчка', () => {
+    // Значок примыкает к длинной стене. Ограничение по расстоянию не даёт
+    // одному щелчку снести всю стену.
+    const image = imageOf(10, 1, new Array<RgbColor>(10).fill(BLACK));
+    const cleaned = removeComponentAt(image, { x: 0, y: 0 }, 0.9, 2);
+
+    expect(pixelAt(cleaned, 0, 0)).toEqual(WHITE);
+    expect(pixelAt(cleaned, 2, 0)).toEqual(WHITE);
+    expect(pixelAt(cleaned, 5, 0)).toEqual(BLACK);
+    expect(pixelAt(cleaned, 9, 0)).toEqual(BLACK);
   });
 
   it('щелчок по пустому месту ничего не меняет', () => {
     const image = imageOf(3, 1, [WHITE, BLACK, WHITE]);
-    const cleaned = removeComponentAt(image, { x: 0, y: 0 }, 0.9);
+    const cleaned = removeComponentAt(image, { x: 0, y: 0 }, 0.9, 100);
     expect(pixelAt(cleaned, 1, 0)).toEqual(BLACK);
   });
 });
@@ -176,13 +191,13 @@ describe('removeComponentAt — убрать значок щелчком', () =>
 describe('inspectComponentAt — размер фигуры под точкой', () => {
   it('сообщает размер и долю площади', () => {
     const image = imageOf(4, 1, [BLACK, BLACK, WHITE, BLACK]);
-    const found = inspectComponentAt(image, { x: 0, y: 0 });
+    const found = inspectComponentAt(image, { x: 0, y: 0 }, 100);
     expect(found?.sizePx).toBe(2);
     expect(found?.share).toBeCloseTo(0.5, 6);
   });
 
   it('на пустом месте возвращает пусто', () => {
-    expect(inspectComponentAt(imageOf(2, 1, [WHITE, BLACK]), { x: 0, y: 0 })).toBe(null);
+    expect(inspectComponentAt(imageOf(2, 1, [WHITE, BLACK]), { x: 0, y: 0 }, 100)).toBe(null);
   });
 });
 
@@ -191,14 +206,19 @@ describe('scaleOperations — пересчёт действий под умен�
     const scaled = scaleOperations(
       [
         { kind: 'erase-rect', rect: { x: 100, y: 200, widthPx: 40, heightPx: 60 } },
-        { kind: 'remove-component', seed: { x: 300, y: 400 }, maxShare: 0.05 },
+        { kind: 'remove-component', seed: { x: 300, y: 400 }, maxShare: 0.05, maxRadiusPx: 200 },
         { ...NORMAL, kind: 'remove-colored' },
       ],
       0.5,
     );
 
     expect(scaled[0]).toEqual({ kind: 'erase-rect', rect: { x: 50, y: 100, widthPx: 20, heightPx: 30 } });
-    expect(scaled[1]).toEqual({ kind: 'remove-component', seed: { x: 150, y: 200 }, maxShare: 0.05 });
+    expect(scaled[1]).toEqual({
+      kind: 'remove-component',
+      seed: { x: 150, y: 200 },
+      maxShare: 0.05,
+      maxRadiusPx: 100,
+    });
     expect(scaled[2]).toEqual({ ...NORMAL, kind: 'remove-colored' });
   });
 });
@@ -324,3 +344,4 @@ describe('downscale — уменьшение для предпросмотра',
     expect(same.heightPx).toBe(1);
   });
 });
+

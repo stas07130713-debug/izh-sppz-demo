@@ -1,18 +1,16 @@
 /**
- * Связные фигуры на плане.
+ * Прорастание удаления по рисунку.
  *
  * Значок огнетушителя на плане эвакуации — это красная заливка в чёрной рамке.
  * Убрав только красное, получаем пустую чёрную рамку: по цвету обводка от стены
- * не отличается. Поэтому фигура рассматривается целиком: если связный кусок
- * рисунка в основном цветной и невелик по площади, он убирается полностью,
- * вместе с обводкой и подписью, которая к нему прилипла.
+ * не отличается. Поэтому удаление прорастает от цветных точек в соседний
+ * рисунок и снимает обводку.
  *
- * Стены при этом защищены размером: они образуют одну огромную связную фигуру
- * на весь чертёж, которая заведомо больше допустимой доли площади.
+ * Прорастание обязательно ограничено числом шагов. Ранняя попытка убирать
+ * связную фигуру целиком приводила к тому, что стрелка, коснувшаяся стены,
+ * утаскивала за собой всю стену: они образуют одну связную фигуру. С
+ * ограничением стена теряет лишь несколько точек в месте касания.
  */
-
-/** Выше этого числа точек разбор фигур не выполняется: слишком дорого по памяти. */
-export const MAX_PIXELS_FOR_COMPONENTS = 30_000_000;
 
 export interface ComponentSummary {
   readonly sizePx: number;
@@ -21,31 +19,85 @@ export interface ComponentSummary {
 }
 
 /**
- * Обходит связную фигуру от заданной точки и вызывает visit для каждой её точки.
+ * Прорастание по рисунку от уже отмеченных точек.
  *
- * Обход итеративный, со своим стеком: рекурсия на фигуре в миллион точек
- * переполнила бы стек вызовов.
+ * Обход в ширину: сначала все точки на расстоянии одного шага, затем двух и так
+ * далее, пока не кончатся шаги. Изменяет переданную маску на месте.
  */
-function walkComponent(
+export function growIntoInk(
+  removalMask: Uint8Array,
   inkMask: Uint8Array,
-  visited: Uint8Array,
+  widthPx: number,
+  heightPx: number,
+  steps: number,
+): Uint8Array {
+  if (steps < 1) return removalMask;
+
+  let frontier: number[] = [];
+  for (let pixel = 0; pixel < removalMask.length; pixel += 1) {
+    if (removalMask[pixel] === 1) frontier.push(pixel);
+  }
+
+  for (let step = 0; step < steps && frontier.length > 0; step += 1) {
+    const next: number[] = [];
+
+    for (const pixel of frontier) {
+      const column = pixel % widthPx;
+      const row = (pixel - column) / widthPx;
+
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = column + dx;
+          const ny = row + dy;
+          if (nx < 0 || ny < 0 || nx >= widthPx || ny >= heightPx) continue;
+
+          const neighbour = ny * widthPx + nx;
+          if (inkMask[neighbour] === 1 && removalMask[neighbour] === 0) {
+            removalMask[neighbour] = 1;
+            next.push(neighbour);
+          }
+        }
+      }
+    }
+
+    frontier = next;
+  }
+
+  return removalMask;
+}
+
+/**
+ * Обходит связную фигуру от заданной точки, не удаляясь дальше указанного
+ * расстояния. Возвращает найденные точки.
+ *
+ * Ограничение по расстоянию защищает от случая, когда значок касается стены:
+ * без него один щелчок снёс бы полчертежа.
+ */
+function collectComponent(
+  inkMask: Uint8Array,
   widthPx: number,
   heightPx: number,
   start: number,
-  visit: (pixel: number) => void,
-): number {
-  if (inkMask[start] !== 1 || visited[start] === 1) return 0;
+  maxRadiusPx: number,
+  limit: number,
+): number[] {
+  if (inkMask[start] !== 1) return [];
 
+  const startColumn = start % widthPx;
+  const startRow = (start - startColumn) / widthPx;
+
+  const visited = new Uint8Array(inkMask.length);
   const stack = [start];
   visited[start] = 1;
-  let size = 0;
+  const found: number[] = [];
 
   while (stack.length > 0) {
     const pixel = stack.pop();
     if (pixel === undefined) break;
 
-    visit(pixel);
-    size += 1;
+    found.push(pixel);
+    if (found.length > limit) return found;
 
     const column = pixel % widthPx;
     const row = (pixel - column) / widthPx;
@@ -56,6 +108,7 @@ function walkComponent(
         const nx = column + dx;
         const ny = row + dy;
         if (nx < 0 || ny < 0 || nx >= widthPx || ny >= heightPx) continue;
+        if (Math.abs(nx - startColumn) > maxRadiusPx || Math.abs(ny - startRow) > maxRadiusPx) continue;
 
         const neighbour = ny * widthPx + nx;
         if (inkMask[neighbour] === 1 && visited[neighbour] === 0) {
@@ -66,70 +119,23 @@ function walkComponent(
     }
   }
 
-  return size;
+  return found;
 }
 
-export interface WholeSymbolOptions {
-  /** Какая доля точек фигуры должна быть цветной, чтобы убрать её целиком. */
-  readonly minColoredShare: number;
-  /** Фигуры крупнее этой доли площади считаются зданием и не трогаются. */
-  readonly maxSymbolShare: number;
-}
-
-/**
- * Дополняет маску удаления целыми фигурами, которые в основном состоят из
- * цветного. Изменяет переданную маску на месте и возвращает её же.
- */
-export function addWholeColoredSymbols(
-  removalMask: Uint8Array,
-  inkMask: Uint8Array,
-  colorMask: Uint8Array,
-  widthPx: number,
-  heightPx: number,
-  options: WholeSymbolOptions,
-): Uint8Array {
-  const totalPixels = widthPx * heightPx;
-  if (totalPixels > MAX_PIXELS_FOR_COMPONENTS) return removalMask;
-
-  const visited = new Uint8Array(totalPixels);
-  const maxSize = Math.max(1, Math.floor(totalPixels * options.maxSymbolShare));
-
-  for (let start = 0; start < totalPixels; start += 1) {
-    if (inkMask[start] !== 1 || visited[start] === 1) continue;
-
-    const pixels: number[] = [];
-    let colored = 0;
-
-    walkComponent(inkMask, visited, widthPx, heightPx, start, (pixel) => {
-      // Крупные фигуры не запоминаем целиком: это стены, они всё равно останутся.
-      if (pixels.length <= maxSize) pixels.push(pixel);
-      if (colorMask[pixel] === 1) colored += 1;
-    });
-
-    if (pixels.length > maxSize) continue;
-    if (colored / pixels.length < options.minColoredShare) continue;
-
-    for (const pixel of pixels) removalMask[pixel] = 1;
-  }
-
-  return removalMask;
-}
-
-/** Сведения о фигуре под указанной точкой. Нужно, чтобы предупредить пользователя
- *  до того, как он щелчком снесёт полчертежа. */
+/** Размер фигуры под точкой — чтобы предупредить пользователя до удаления. */
 export function measureComponentAt(
   inkMask: Uint8Array,
   widthPx: number,
   heightPx: number,
   pixel: number,
+  maxRadiusPx: number,
 ): ComponentSummary | null {
   const totalPixels = widthPx * heightPx;
   if (pixel < 0 || pixel >= totalPixels) return null;
   if (inkMask[pixel] !== 1) return null;
 
-  const visited = new Uint8Array(totalPixels);
-  const size = walkComponent(inkMask, visited, widthPx, heightPx, pixel, () => undefined);
-  return { sizePx: size, share: size / totalPixels };
+  const found = collectComponent(inkMask, widthPx, heightPx, pixel, maxRadiusPx, totalPixels);
+  return { sizePx: found.length, share: found.length / totalPixels };
 }
 
 /** Помечает в маске удаления фигуру, на которую указал пользователь. */
@@ -140,22 +146,18 @@ export function addComponentAt(
   heightPx: number,
   pixel: number,
   maxShare: number,
+  maxRadiusPx: number,
 ): Uint8Array {
   const totalPixels = widthPx * heightPx;
   if (pixel < 0 || pixel >= totalPixels || inkMask[pixel] !== 1) return removalMask;
 
-  const visited = new Uint8Array(totalPixels);
-  const pixels: number[] = [];
-  const maxSize = Math.max(1, Math.floor(totalPixels * maxShare));
-
-  walkComponent(inkMask, visited, widthPx, heightPx, pixel, (found) => {
-    if (pixels.length <= maxSize) pixels.push(found);
-  });
+  const limit = Math.max(1, Math.floor(totalPixels * maxShare));
+  const found = collectComponent(inkMask, widthPx, heightPx, pixel, maxRadiusPx, limit);
 
   // Слишком крупная фигура — это стены. Молча ничего не делаем: предупреждение
   // пользователь получает в интерфейсе ещё до добавления действия.
-  if (pixels.length > maxSize) return removalMask;
+  if (found.length > limit) return removalMask;
 
-  for (const found of pixels) removalMask[found] = 1;
+  for (const item of found) removalMask[item] = 1;
   return removalMask;
 }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Состояние очистки в интерфейсе и сборка списка действий для ядра.
  *
  * Порядок действий важен и задаётся здесь один раз:
@@ -19,9 +19,7 @@ export type CleanupStrength = 'light' | 'normal' | 'strong';
 export interface ColoredPreset {
   readonly saturationThreshold: number;
   readonly haloRadiusPx: number;
-  readonly wholeSymbols: boolean;
-  readonly minColoredShare: number;
-  readonly maxSymbolShare: number;
+  readonly symbolGrowthPx: number;
 }
 
 /**
@@ -33,27 +31,9 @@ export interface ColoredPreset {
  * подписи, если они есть на чертеже.
  */
 export const STRENGTH_PRESETS: Record<CleanupStrength, ColoredPreset> = {
-  light: {
-    saturationThreshold: 0.3,
-    haloRadiusPx: 0,
-    wholeSymbols: false,
-    minColoredShare: 0.5,
-    maxSymbolShare: 0.01,
-  },
-  normal: {
-    saturationThreshold: 0.15,
-    haloRadiusPx: 1,
-    wholeSymbols: true,
-    minColoredShare: 0.35,
-    maxSymbolShare: 0.02,
-  },
-  strong: {
-    saturationThreshold: 0.08,
-    haloRadiusPx: 2,
-    wholeSymbols: true,
-    minColoredShare: 0.2,
-    maxSymbolShare: 0.05,
-  },
+  light: { saturationThreshold: 0.3, haloRadiusPx: 0, symbolGrowthPx: 0 },
+  normal: { saturationThreshold: 0.15, haloRadiusPx: 1, symbolGrowthPx: 6 },
+  strong: { saturationThreshold: 0.08, haloRadiusPx: 2, symbolGrowthPx: 14 },
 };
 
 export const STRENGTH_LABELS: Record<CleanupStrength, string> = {
@@ -64,6 +44,10 @@ export const STRENGTH_LABELS: Record<CleanupStrength, string> = {
 
 /** Фигура крупнее этой доли площади считается зданием и щелчком не убирается. */
 export const COMPONENT_MAX_SHARE = 0.02;
+
+/** Дальше этого расстояния от щелчка удаление не уходит: иначе значок,
+ *  примыкающий к стене, утащил бы стену за собой. */
+export const COMPONENT_MAX_RADIUS_PX = 250;
 
 export interface RemovedColor {
   readonly color: RgbColor;
@@ -101,7 +85,7 @@ export function toOperations(state: CleanupState): CleanupOperation[] {
     operations.push({ kind: 'erase-rect', rect });
   }
   for (const seed of state.removedComponents) {
-    operations.push({ kind: 'remove-component', seed, maxShare: COMPONENT_MAX_SHARE });
+    operations.push({ kind: 'remove-component', seed, maxShare: COMPONENT_MAX_SHARE, maxRadiusPx: COMPONENT_MAX_RADIUS_PX });
   }
   if (state.removeColored) {
     operations.push({ kind: 'remove-colored', ...STRENGTH_PRESETS[state.strength] });
@@ -178,3 +162,4 @@ export function fromOperations(operations: readonly CleanupOperation[]): Cleanup
 
   return state;
 }
+

@@ -21,7 +21,7 @@ import { err, ok } from '@izh/contracts';
 import { buildColorMask, buildInkMask, dilateMask, luminanceOf } from './color-mask.js';
 import {
   addComponentAt,
-  addWholeColoredSymbols,
+  growIntoInk,
   measureComponentAt,
   type ComponentSummary,
 } from './components.js';
@@ -112,9 +112,7 @@ export function removeColor(image: RgbaImage, color: RgbColor, tolerance: number
 export interface RemoveColoredOptions {
   readonly saturationThreshold: number;
   readonly haloRadiusPx: number;
-  readonly wholeSymbols: boolean;
-  readonly minColoredShare: number;
-  readonly maxSymbolShare: number;
+  readonly symbolGrowthPx: number;
 }
 
 /**
@@ -124,22 +122,22 @@ export interface RemoveColoredOptions {
  *   1. находим цветные точки по относительной насыщенности;
  *   2. расширяем маску, чтобы снять бледную кайму сглаживания вокруг них —
  *      иначе на месте стрелки остаётся её призрак;
- *   3. если включено, убираем целиком те связные фигуры, которые в основном
- *      цветные, — иначе от значка огнетушителя остаётся пустая чёрная рамка.
+ *   3. прорастаем от цветных точек в соседний рисунок на ограниченное число
+ *      шагов — иначе от значка огнетушителя остаётся пустая чёрная рамка.
+ *
+ * Ограничение числа шагов принципиально: без него стрелка, коснувшаяся стены,
+ * утащила бы за собой всю стену.
  */
 export function removeColored(image: RgbaImage, options: RemoveColoredOptions): RgbaImage {
   const colorMask = buildColorMask(image.data, options.saturationThreshold);
 
-  let removal = options.haloRadiusPx > 0
+  const removal = options.haloRadiusPx > 0
     ? dilateMask(colorMask, image.widthPx, image.heightPx, options.haloRadiusPx)
     : new Uint8Array(colorMask);
 
-  if (options.wholeSymbols) {
+  if (options.symbolGrowthPx > 0) {
     const inkMask = buildInkMask(image.data);
-    removal = addWholeColoredSymbols(removal, inkMask, colorMask, image.widthPx, image.heightPx, {
-      minColoredShare: options.minColoredShare,
-      maxSymbolShare: options.maxSymbolShare,
-    });
+    growIntoInk(removal, inkMask, image.widthPx, image.heightPx, options.symbolGrowthPx);
   }
 
   return applyRemovalMask(image, removal);
@@ -150,6 +148,7 @@ export function removeComponentAt(
   image: RgbaImage,
   seed: PixelPoint,
   maxShare: number,
+  maxRadiusPx: number,
 ): RgbaImage {
   const column = Math.round(seed.x);
   const row = Math.round(seed.y);
@@ -163,19 +162,30 @@ export function removeComponentAt(
     image.heightPx,
     row * image.widthPx + column,
     maxShare,
+    maxRadiusPx,
   );
 
   return applyRemovalMask(image, removal);
 }
 
 /** Размер фигуры под точкой — чтобы предупредить до удаления. */
-export function inspectComponentAt(image: RgbaImage, seed: PixelPoint): ComponentSummary | null {
+export function inspectComponentAt(
+  image: RgbaImage,
+  seed: PixelPoint,
+  maxRadiusPx: number,
+): ComponentSummary | null {
   const column = Math.round(seed.x);
   const row = Math.round(seed.y);
   if (column < 0 || row < 0 || column >= image.widthPx || row >= image.heightPx) return null;
 
   const inkMask = buildInkMask(image.data);
-  return measureComponentAt(inkMask, image.widthPx, image.heightPx, row * image.widthPx + column);
+  return measureComponentAt(
+    inkMask,
+    image.widthPx,
+    image.heightPx,
+    row * image.widthPx + column,
+    maxRadiusPx,
+  );
 }
 
 /** Закрашивает белым все точки, отмеченные в маске. */
@@ -318,6 +328,7 @@ export function scaleOperations(
         return {
           ...operation,
           seed: { x: operation.seed.x * factor, y: operation.seed.y * factor },
+          maxRadiusPx: operation.maxRadiusPx * factor,
         };
       default:
         // Действия с цветом от размера изображения не зависят: радиус каймы
@@ -356,13 +367,11 @@ export function applyCleanup(
         current = removeColored(current, {
           saturationThreshold: operation.saturationThreshold,
           haloRadiusPx: operation.haloRadiusPx,
-          wholeSymbols: operation.wholeSymbols,
-          minColoredShare: operation.minColoredShare,
-          maxSymbolShare: operation.maxSymbolShare,
+          symbolGrowthPx: operation.symbolGrowthPx,
         });
         break;
       case 'remove-component':
-        current = removeComponentAt(current, operation.seed, operation.maxShare);
+        current = removeComponentAt(current, operation.seed, operation.maxShare, operation.maxRadiusPx);
         break;
       case 'keep-dark':
         current = keepDark(current, operation.luminanceThreshold);
