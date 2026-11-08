@@ -1,0 +1,82 @@
+{
+  "head": "56ffd85 2026-08-16 20:45:03 +0300 Документы проекта перенесены в репозиторий",
+  "sourceFiles": 461,
+  "over300": 38,
+  "largest": [
+    {
+      "file": "packages\\desktop\\src\\renderer\\src\\styles.css",
+      "lines": 2429
+    },
+    {
+      "file": "packages\\desktop\\src\\renderer\\src\\components\\MainScreen.tsx",
+      "lines": 1560
+    },
+    {
+      "file": "packages\\desktop\\src\\renderer\\src\\App.tsx",
+      "lines": 979
+    },
+    {
+      "file": "packages\\core\\src\\rules\\rule-package.ts",
+      "lines": 855
+    },
+    {
+      "file": "packages\\desktop\\src\\renderer\\src\\components\\JournalPanel.tsx",
+      "lines": 852
+    },
+    {
+      "file": "packages\\desktop\\src\\renderer\\src\\components\\PlanCanvas.tsx",
+      "lines": 769
+    },
+    {
+      "file": "packages\\engine-plan-source\\src\\image-ops.ts",
+      "lines": 739
+    },
+    {
+      "file": "packages\\desktop\\src\\renderer\\src\\components\\ObjectDetailsForm.tsx",
+      "lines": 666
+    },
+    {
+      "file": "packages\\desktop\\src\\renderer\\src\\components\\JournalImportWizard.tsx",
+      "lines": 624
+    },
+    {
+      "file": "packages\\core\\src\\__tests__\\maintenance.test.ts",
+      "lines": 537
+    },
+    {
+      "file": "packages\\contracts\\src\\plan-objects.ts",
+      "lines": 535
+    },
+    {
+      "file": "packages\\core\\src\\__tests__\\plan-objects.test.ts",
+      "lines": 512
+    },
+    {
+      "file": "packages\\core\\src\\index.ts",
+      "lines": 494
+    },
+    {
+      "file": "packages\\core\\src\\__tests__\\extinguisher-placement.test.ts",
+      "lines": 490
+    },
+    {
+      "file": "packages\\desktop\\src\\renderer\\src\\components\\UnifiedChecklistModal.tsx",
+      "lines": 482
+    },
+    {
+      "file": "packages\\desktop\\src\\main\\ipc.ts",
+      "lines": 478
+    }
+  ],
+  "gitChanges": 528,
+  "untracked": 451,
+  "releaseMismatch": [],
+  "lockVersions": {
+    "electron": "33.4.11",
+    "vite": "5.4.21",
+    "vitest": "2.1.9",
+    "esbuild": "0.21.5",
+    "pdfjs-dist": "4.10.38",
+    "react": "18.3.1"
+  }
+}

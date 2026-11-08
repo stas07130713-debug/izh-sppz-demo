@@ -3,9 +3,15 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { initEngines } from './deps';
-import { runHeadlessTry } from './headless-try';
+import { applyTheme, readStoredTheme } from './use-theme';
+import { installWebDemoBridge } from './web-demo-bridge';
 import './styles.css';
 
+if (import.meta.env.VITE_WEB_DEMO === '1') installWebDemoBridge();
+
+// Полоса окна получает сохранённую тему ещё до экрана входа. Иначе после
+// перезапуска светлая форма на мгновение открывалась под тёмной шапкой.
+applyTheme(readStoredTheme());
 initEngines();
 
 function startInterface(): void {
@@ -21,9 +27,4 @@ function startInterface(): void {
   );
 }
 
-// Безголовый прогон: интерфейс не запускается, программа закрывается сама.
-// Обычный запуск отличается только тем, что прогон не задан в командной строке.
-void runHeadlessTry().then((handled) => {
-  if (handled) void window.izh.headless.done();
-  else startInterface();
-});
+startInterface();

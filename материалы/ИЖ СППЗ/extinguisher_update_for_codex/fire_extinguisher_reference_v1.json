@@ -1,0 +1,93 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-08-22",
+  "description": "Starter extinguisher reference for IJ SPPZ. Use as an extensible local catalog. Store official passport URLs only; do not store PDF files locally.",
+  "manufacturers": [
+    {
+      "manufacturerId": "bontel",
+      "manufacturerName": "BONTEL",
+      "officialSite": "https://bontel.ru",
+      "models": [
+        {
+          "type": "ОВЭ",
+          "model": "ОВЭ-1 BONTEL",
+          "serviceLifeYears": 20,
+          "passportUrl": "https://bontel.ru/upload/iblock/паспорт_овэ_bontel.pdf",
+          "passportSource": "Официальный паспорт BONTEL на линейку ОВЭ-1/2/5/10",
+          "passportRevision": null,
+          "notes": "Официальный паспорт подтвержден в исходной аналитической переписке. Срок службы 20 лет."
+        },
+        {
+          "type": "ОВЭ",
+          "model": "ОВЭ-2 BONTEL",
+          "serviceLifeYears": 20,
+          "passportUrl": "https://bontel.ru/upload/iblock/паспорт_овэ_bontel.pdf",
+          "passportSource": "Официальный паспорт BONTEL на линейку ОВЭ-1/2/5/10",
+          "passportRevision": null,
+          "notes": "Официальный паспорт подтвержден в исходной аналитической переписке. Срок службы 20 лет."
+        },
+        {
+          "type": "ОВЭ",
+          "model": "ОВЭ-5 BONTEL",
+          "serviceLifeYears": 20,
+          "passportUrl": "https://bontel.ru/upload/iblock/паспорт_овэ_bontel.pdf",
+          "passportSource": "Официальный паспорт BONTEL на линейку ОВЭ-1/2/5/10",
+          "passportRevision": null,
+          "notes": "Официальный паспорт подтвержден в исходной аналитической переписке. Срок службы 20 лет."
+        },
+        {
+          "type": "ОВЭ",
+          "model": "ОВЭ-10 BONTEL",
+          "serviceLifeYears": 20,
+          "passportUrl": "https://bontel.ru/upload/iblock/паспорт_овэ_bontel.pdf",
+          "passportSource": "Официальный паспорт BONTEL на линейку ОВЭ-1/2/5/10",
+          "passportRevision": null,
+          "notes": "Официальный паспорт подтвержден в исходной аналитической переписке. Срок службы 20 лет."
+        }
+      ]
+    },
+    {
+      "manufacturerId": "yarpozhinvest",
+      "manufacturerName": "Ярпожинвест",
+      "officialSite": "https://yarpozhinvest.ru",
+      "models": [
+        {
+          "type": "ОП",
+          "model": "ОП-4 Ярпожинвест",
+          "serviceLifeYears": 10,
+          "passportUrl": null,
+          "passportSource": "Официальный сайт производителя подтвержден; официальный электронный паспорт для прямой ссылки не найден",
+          "passportRevision": null,
+          "notes": "Кнопку паспорта для этой модели не показывать, пока не будет добавлена официальная ссылка."
+        },
+        {
+          "type": "ОП",
+          "model": "ОП-5 Ярпожинвест",
+          "serviceLifeYears": 10,
+          "passportUrl": null,
+          "passportSource": "Официальный сайт производителя подтвержден; официальный электронный паспорт для прямой ссылки не найден",
+          "passportRevision": null,
+          "notes": "Кнопку паспорта для этой модели не показывать, пока не будет добавлена официальная ссылка."
+        },
+        {
+          "type": "ОУ",
+          "model": "ОУ-3 Ярпожинвест",
+          "serviceLifeYears": 10,
+          "passportUrl": null,
+          "passportSource": "Официальный сайт производителя подтвержден; официальный электронный паспорт для прямой ссылки не найден",
+          "passportRevision": null,
+          "notes": "Кнопку паспорта для этой модели не показывать, пока не будет добавлена официальная ссылка."
+        },
+        {
+          "type": "ОУ",
+          "model": "ОУ-5 Ярпожинвест",
+          "serviceLifeYears": 10,
+          "passportUrl": null,
+          "passportSource": "Официальный сайт производителя подтвержден; официальный электронный паспорт для прямой ссылки не найден",
+          "passportRevision": null,
+          "notes": "Кнопку паспорта для этой модели не показывать, пока не будет добавлена официальная ссылка."
+        }
+      ]
+    }
+  ]
+}

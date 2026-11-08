@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import cp from 'node:child_process';
+const source='C:/Users/Svyt0/Projects/izh-sppz';
+const dest='C:/Users/Svyt0/.codex/visualizations/2026/09/05/01a0739f-8a0e-7583-b985-a75c6582cab9/audit-build';
+fs.mkdirSync(dest,{recursive:true});
+for(const f of ['package.json','package-lock.json','tsconfig.json','tsconfig.base.json'])fs.copyFileSync(path.join(source,f),path.join(dest,f));
+fs.cpSync(path.join(source,'packages'),path.join(dest,'packages'),{recursive:true,filter:p=>!['out','node_modules'].includes(path.basename(p))});
+if(!fs.existsSync(path.join(dest,'node_modules')))fs.symlinkSync(path.join(source,'node_modules'),path.join(dest,'node_modules'),'junction');
+const result=cp.spawnSync('npm.cmd',['run','build'],{cwd:dest,shell:true,encoding:'utf8'});
+fs.writeFileSync(new URL('./build-result.txt',import.meta.url),result.stdout+'\n'+result.stderr);
+console.log(result.stdout,result.stderr);process.exitCode=result.status??1;

@@ -11,7 +11,10 @@
     "test": "vitest run",
     "check": "npm run typecheck && npm run test",
     "dev": "npm run dev --workspace @izh/desktop",
-    "build": "npm run build --workspace @izh/desktop"
+    "build": "npm run build --workspace @izh/desktop",
+    "web:export-demo": "vite-node tools/export-web-demo-data.ts",
+    "web:build": "vite build --config packages/desktop/web.vite.config.ts",
+    "web:preview": "vite preview --config packages/desktop/web.vite.config.ts --host 127.0.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

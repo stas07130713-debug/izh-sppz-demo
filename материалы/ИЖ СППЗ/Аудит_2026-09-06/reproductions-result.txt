@@ -1,0 +1,24 @@
+
+ RUN  v2.1.9 C:/Users/Svyt0/OneDrive/Рабочий стол/КЛОУД/ИЖ СППЗ/Аудит_2026-09-06
+
+ ✓ audit-reproductions.test.ts > R1: same journal ID silently replaces original content
+ ✓ audit-reproductions.test.ts > R2: malformed journal record disappears after next valid save
+ ✓ audit-reproductions.test.ts > R3: Undo adapter overwrites corrupted object collection
+ ✓ audit-reproductions.test.ts > R4: Undo creation deletes equipment that already has journal entries
+ ✓ audit-reproductions.test.ts > R5: extension path traversal writes outside files directory
+ ✓ audit-reproductions.test.ts > R6: create then modify within command loses null before-state
+ ✓ audit-reproductions.test.ts > R7: failed Undo removes command from in-memory Undo stack
+stdout | audit-reproductions.test.ts > R8: overlapping saves lose equipment records / return file errors
+CONCURRENT_SAVES {"requested":12,"ok":3,"count":1}
+
+ ✓ audit-reproductions.test.ts > R8: overlapping saves lose equipment records / return file errors
+ ✓ audit-reproductions.test.ts > R9: Moscow calendar day is yesterday before 03:00
+ ✓ audit-reproductions.test.ts > R10: signer identity can change and crypto signature still verifies; key removal also verifies
+ ✓ audit-reproductions.test.ts > R11: replacing checklist attachments does not change signed content
+ ✓ audit-reproductions.test.ts > R12: generic OVE rank does not reproduce published BONTEL model ranks
+
+ Test Files  1 passed (1)
+      Tests  12 passed (12)
+   Start at  01:36:11
+   Duration  1.06s (transform 271ms, setup 0ms, collect 398ms, tests 300ms, environment 0ms, prepare 141ms)
+

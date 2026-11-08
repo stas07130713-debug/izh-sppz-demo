@@ -14,8 +14,10 @@
   "dependencies": {
     "@izh/contracts": "0.1.0",
     "@izh/core": "0.1.0",
+    "@izh/engine-journal-source": "0.1.0",
     "@izh/engine-plan-source": "0.1.0",
-    "@izh/planvector-engine": "0.1.0",
+    "@izh/engine-regulations": "0.1.0",
+    "node-sqlite3-wasm": "^0.8.60",
     "pdfjs-dist": "^4.9.155",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
@@ -29,4 +31,3 @@
     "vite": "^5.4.11"
   }
 }
-

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Эвакуационный выход">
+  <rect x="3" y="3" width="90" height="90" rx="7" fill="#078346" stroke="#fff" stroke-width="4"/>
+  <path fill="#fff" d="M18 19h31v9H27v40h22v9H18z"/>
+  <circle cx="54" cy="29" r="7" fill="#fff"/>
+  <path fill="#fff" d="M48 38l12-3 9 10 10 2-2 7-13-3-6-7-5 14 10 15-7 5-13-18 5-22z"/>
+  <path fill="#fff" d="M69 65h13v7H69z"/>
+  <path fill="#fff" d="M78 59l11 9-11 10z"/>
+</svg>

@@ -12,11 +12,13 @@ import {
   cropImage,
   downscale,
   eraseRect,
+  erasePolygon,
   inspectComponentAt,
   keepDark,
   removeColor,
   removeColored,
   removeComponentAt,
+  removeSmallComponents,
   samplePalette,
   scaleOperations,
 } from '../image-ops.js';
@@ -70,9 +72,9 @@ describe('removeColored — убрать всё цветное', () => {
     expect(pixelAt(cleaned, 2, 0)).toEqual(WHITE);
   });
 
-  it('серую штриховку не трогает: у неё нет насыщенности', () => {
+  it('светлую серую штриховку переводит в фон архитектурной основы', () => {
     const cleaned = removeColored(planStrip(), NORMAL);
-    expect(pixelAt(cleaned, 3, 0)).toEqual(LIGHT_GRAY);
+    expect(pixelAt(cleaned, 3, 0)).toEqual(WHITE);
   });
 
   it('при высоком пороге насыщенности не убирает ничего', () => {
@@ -80,7 +82,7 @@ describe('removeColored — убрать всё цветное', () => {
     expect(pixelAt(cleaned, 1, 0)).toEqual(GREEN);
   });
 
-  it('бледная цветная заливка убирается, а серая того же тона — нет', () => {
+  it('бледная цветная заливка и светлая серая заливка становятся фоном', () => {
     // Бледно-зелёный: разброс каналов невелик, но по отношению к яркости заметен.
     const paleGreen: RgbColor = { r: 200, g: 230, b: 205 };
     const gray: RgbColor = { r: 215, g: 215, b: 215 };
@@ -89,24 +91,24 @@ describe('removeColored — убрать всё цветное', () => {
       saturationThreshold: 0.1,
     });
     expect(pixelAt(cleaned, 0, 0)).toEqual(WHITE);
-    expect(pixelAt(cleaned, 1, 0)).toEqual(gray);
+    expect(pixelAt(cleaned, 1, 0)).toEqual(WHITE);
   });
 
-  it('кайма сглаживания вокруг цветного тоже убирается', () => {
+  it('кайма сглаживания вокруг цветного тоже убирается даже без ручного радиуса', () => {
     // Так выглядит край зелёной стрелки: яркий центр и бледная кайма,
     // у которой насыщенность ниже порога.
     const halo: RgbColor = { r: 225, g: 240, b: 230 };
     const image = imageOf(3, 1, [halo, GREEN, halo]);
 
     const withoutHalo = removeColored(image, { ...NORMAL, haloRadiusPx: 0 });
-    expect(pixelAt(withoutHalo, 0, 0)).toEqual(halo);
+    expect(pixelAt(withoutHalo, 0, 0)).toEqual(WHITE);
 
     const withHalo = removeColored(image, { ...NORMAL, haloRadiusPx: 1 });
     expect(pixelAt(withHalo, 0, 0)).toEqual(WHITE);
     expect(pixelAt(withHalo, 2, 0)).toEqual(WHITE);
   });
 
-  it('значок целиком: чёрная обводка вокруг красной заливки тоже уходит', () => {
+  it('цветная автоматика не трогает чёрную обводку значка', () => {
     // Значок огнетушителя: рамка чёрная, внутри красное. Стена рядом не касается.
     const image = imageOf(5, 3, [
       BLACK, BLACK, BLACK, WHITE, BLACK,
@@ -114,21 +116,16 @@ describe('removeColored — убрать всё цветное', () => {
       BLACK, BLACK, BLACK, WHITE, BLACK,
     ]);
 
-    const partial = removeColored(image, { ...NORMAL, symbolGrowthPx: 0 });
-    // Без разбора фигур от значка остаётся пустая рамка.
-    expect(pixelAt(partial, 0, 0)).toEqual(BLACK);
-
-    const whole = removeColored(image, {
+    const cleaned = removeColored(image, {
       ...NORMAL,
       symbolGrowthPx: 3,
     });
-    expect(pixelAt(whole, 0, 0)).toEqual(WHITE);
-    expect(pixelAt(whole, 1, 1)).toEqual(WHITE);
-    // Отдельно стоящая стена не затронута.
-    expect(pixelAt(whole, 4, 1)).toEqual(BLACK);
+    expect(pixelAt(cleaned, 0, 0)).toEqual(BLACK);
+    expect(pixelAt(cleaned, 1, 1)).toEqual(WHITE);
+    expect(pixelAt(cleaned, 4, 1)).toEqual(BLACK);
   });
 
-  it('стена, которой касается стрелка, теряет только место касания', () => {
+  it('стена, которой касается стрелка, не съедается автоматической очисткой', () => {
     // Ровно тот случай, на который пожаловался заказчик: раньше связная фигура
     // убиралась целиком, и вместе со стрелкой уходила вся стена.
     // Длинная чёрная стена, к её началу примыкает зелёная стрелка.
@@ -138,9 +135,9 @@ describe('removeColored — убрать всё цветное', () => {
     const cleaned = removeColored(image, { ...NORMAL, symbolGrowthPx: 2 });
 
     expect(pixelAt(cleaned, 0, 0)).toEqual(WHITE); // стрелка убрана
-    expect(pixelAt(cleaned, 1, 0)).toEqual(WHITE); // и два шага стены рядом с ней
-    expect(pixelAt(cleaned, 2, 0)).toEqual(WHITE);
-    expect(pixelAt(cleaned, 3, 0)).toEqual(BLACK); // дальше стена цела
+    expect(pixelAt(cleaned, 1, 0)).toEqual(BLACK);
+    expect(pixelAt(cleaned, 2, 0)).toEqual(BLACK);
+    expect(pixelAt(cleaned, 3, 0)).toEqual(BLACK);
     expect(pixelAt(cleaned, 12, 0)).toEqual(BLACK);
   });
 
@@ -148,6 +145,21 @@ describe('removeColored — убрать всё цветное', () => {
     const image = imageOf(4, 1, [GREEN, BLACK, BLACK, BLACK]);
     const cleaned = removeColored(image, { ...NORMAL, symbolGrowthPx: 0 });
     expect(pixelAt(cleaned, 1, 0)).toEqual(BLACK);
+  });
+
+  it('восстанавливает короткий разрыв длинной стены под цветным маршрутом', () => {
+    const image = imageOf(13, 1, [
+      BLACK, BLACK, BLACK, BLACK, BLACK, BLACK,
+      GREEN,
+      BLACK, BLACK, BLACK, BLACK, BLACK, BLACK,
+    ]);
+    const cleaned = removeColored(image, { ...NORMAL, symbolGrowthPx: 0 });
+
+    expect(pixelAt(cleaned, 0, 0)).toEqual(BLACK);
+    expect(pixelAt(cleaned, 1, 0)).toEqual(BLACK);
+    expect(pixelAt(cleaned, 6, 0)).toEqual(BLACK);
+    expect(pixelAt(cleaned, 11, 0)).toEqual(BLACK);
+    expect(pixelAt(cleaned, 12, 0)).toEqual(BLACK);
   });
 });
 
@@ -201,12 +213,33 @@ describe('inspectComponentAt — размер фигуры под точкой',
   });
 });
 
+describe('removeSmallComponents — убрать мелкие текстовые подписи', () => {
+  it('убирает маленькую подпись и оставляет длинную линию стены', () => {
+    const pixels = new Array<RgbColor>(60).fill(WHITE);
+    for (let x = 0; x < 40; x += 1) pixels[x] = BLACK;
+    pixels[55] = BLACK;
+    pixels[56] = BLACK;
+
+    const cleaned = removeSmallComponents(imageOf(60, 1, pixels), {
+      maxWidthPx: 3,
+      maxHeightPx: 3,
+      maxPixels: 3,
+    });
+
+    expect(pixelAt(cleaned, 0, 0)).toEqual(BLACK);
+    expect(pixelAt(cleaned, 39, 0)).toEqual(BLACK);
+    expect(pixelAt(cleaned, 55, 0)).toEqual(WHITE);
+    expect(pixelAt(cleaned, 56, 0)).toEqual(WHITE);
+  });
+});
+
 describe('scaleOperations — пересчёт действий под уменьшенную копию', () => {
   it('области и точки пересчитываются, настройки цвета — нет', () => {
     const scaled = scaleOperations(
       [
         { kind: 'erase-rect', rect: { x: 100, y: 200, widthPx: 40, heightPx: 60 } },
         { kind: 'remove-component', seed: { x: 300, y: 400 }, maxShare: 0.05, maxRadiusPx: 200 },
+        { kind: 'remove-small-components', maxWidthPx: 180, maxHeightPx: 80, maxPixels: 900 },
         { ...NORMAL, kind: 'remove-colored' },
       ],
       0.5,
@@ -219,7 +252,8 @@ describe('scaleOperations — пересчёт действий под умен�
       maxShare: 0.05,
       maxRadiusPx: 100,
     });
-    expect(scaled[2]).toEqual({ ...NORMAL, kind: 'remove-colored' });
+    expect(scaled[2]).toEqual({ kind: 'remove-small-components', maxWidthPx: 90, maxHeightPx: 40, maxPixels: 225 });
+    expect(scaled[3]).toEqual({ ...NORMAL, kind: 'remove-colored' });
   });
 });
 
@@ -345,3 +379,71 @@ describe('downscale — уменьшение для предпросмотра',
   });
 });
 
+describe('erasePolygon — стереть область произвольной формы', () => {
+  /** Поле 5×5 чёрных точек: стёртое видно сразу. */
+  const black5 = (): RgbaImage => imageOf(5, 5, Array.from({ length: 25 }, () => BLACK));
+
+  it('стирает внутренность треугольника, не трогая остальное', () => {
+    // Треугольник по левому верхнему углу: (0,0) — (4,0) — (0,4).
+    const cleaned = erasePolygon(black5(), [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 0, y: 4 }]);
+
+    expect(pixelAt(cleaned, 0, 0)).toEqual(WHITE);
+    expect(pixelAt(cleaned, 1, 1)).toEqual(WHITE);
+    // Правый нижний угол за гипотенузой — остаётся.
+    expect(pixelAt(cleaned, 4, 4)).toEqual(BLACK);
+    expect(pixelAt(cleaned, 3, 3)).toEqual(BLACK);
+  });
+
+  it('невыпуклая обводка стирает только то, что внутри', () => {
+    // Буква «П»: две ножки стираются, вырез между ними — нет. Прямоугольником
+    // так не выделить, ради этого обводка и нужна.
+    const cleaned = erasePolygon(black5(), [
+      { x: 0, y: 0 }, { x: 5, y: 0 }, { x: 5, y: 5 }, { x: 4, y: 5 },
+      { x: 4, y: 2 }, { x: 1, y: 2 }, { x: 1, y: 5 }, { x: 0, y: 5 },
+    ]);
+
+    expect(pixelAt(cleaned, 0, 4)).toEqual(WHITE);
+    expect(pixelAt(cleaned, 4, 4)).toEqual(WHITE);
+    expect(pixelAt(cleaned, 2, 4)).toEqual(BLACK);
+  });
+
+  it('обводка за краем изображения не выходит за его границы', () => {
+    const cleaned = erasePolygon(black5(), [
+      { x: -50, y: -50 }, { x: 50, y: -50 }, { x: 50, y: 2 }, { x: -50, y: 2 },
+    ]);
+
+    expect(cleaned.widthPx).toBe(5);
+    expect(pixelAt(cleaned, 0, 0)).toEqual(WHITE);
+    expect(pixelAt(cleaned, 4, 4)).toEqual(BLACK);
+  });
+
+  it('меньше трёх точек стирать нечего — изображение возвращается как есть', () => {
+    const cleaned = erasePolygon(black5(), [{ x: 0, y: 0 }, { x: 4, y: 4 }]);
+    expect(pixelAt(cleaned, 0, 0)).toEqual(BLACK);
+  });
+
+  it('в списке действий обводка применяется наравне с прямоугольником', () => {
+    const result = applyCleanup(black5(), [
+      { kind: 'erase-rect', rect: { x: 0, y: 0, widthPx: 2, heightPx: 1 } },
+      { kind: 'erase-polygon', points: [{ x: 3, y: 3 }, { x: 5, y: 3 }, { x: 5, y: 5 }, { x: 3, y: 5 }] },
+    ]);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(pixelAt(result.value, 0, 0)).toEqual(WHITE);
+    expect(pixelAt(result.value, 4, 4)).toEqual(WHITE);
+    expect(pixelAt(result.value, 0, 4)).toEqual(BLACK);
+  });
+
+  it('на уменьшенной копии обводка пересчитывается вместе с остальным', () => {
+    const scaled = scaleOperations(
+      [{ kind: 'erase-polygon', points: [{ x: 10, y: 20 }, { x: 30, y: 20 }, { x: 30, y: 40 }] }],
+      0.5,
+    );
+
+    const first = scaled[0];
+    expect(first?.kind).toBe('erase-polygon');
+    if (first?.kind !== 'erase-polygon') return;
+    expect(first.points).toEqual([{ x: 5, y: 10 }, { x: 15, y: 10 }, { x: 15, y: 20 }]);
+  });
+});

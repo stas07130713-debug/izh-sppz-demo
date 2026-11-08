@@ -12,7 +12,7 @@
  */
 
 import type { BackdropCleanup, CleanupOperation, Result } from '@izh/contracts';
-import { ok } from '@izh/contracts';
+import { CLEANUP_ENGINE_VERSION, ok } from '@izh/contracts';
 import type { BackdropDeps } from './backdrop-deps.js';
 
 export interface ApplyBackdropCleanupInput {
@@ -45,6 +45,7 @@ export async function applyBackdropCleanup(
 
   const cleanup: BackdropCleanup = {
     backdropId: input.backdropId,
+    engineVersion: CLEANUP_ENGINE_VERSION,
     operations: input.operations,
     cleanedImageHash: cleanedHash.value,
     widthPx: cleaned.value.widthPx,

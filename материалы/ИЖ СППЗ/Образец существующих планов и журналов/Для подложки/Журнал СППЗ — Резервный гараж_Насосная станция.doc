@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Журнал СППЗ — Резервный гараж</title>
+<style>
+@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;color:#111;font-size:9pt}
+h1{font-size:16pt;margin:0 0 4mm}h2{font-size:11pt;margin:0 0 5mm;font-weight:normal}
+table{border-collapse:collapse;width:100%}th,td{border:1px solid #555;padding:3px;vertical-align:top}
+th{background:#e8edf3;font-weight:700}tr{break-inside:avoid}.meta{margin-bottom:4mm;color:#444}
+</style></head><body><h1>Журнал СППЗ — Резервный гараж</h1>
+<h2>Насосная станция</h2><div class="meta">Сформировано: 20.08.2026, 20:57:02</div>
+<table><thead><tr><th>№</th><th>Регистрационный номер</th><th>Модель</th><th>Место установки</th><th>Техническое состояние</th><th>Регламентный статус</th><th>Примечание</th></tr></thead><tbody><tr><td>1</td><td></td><td></td><td>Резервный гараж</td><td>не определено</td><td>нет данных</td><td></td></tr></tbody></table></body></html>

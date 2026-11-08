@@ -1,0 +1,70 @@
+{
+  "results": [
+    {
+      "width": 1024,
+      "design": "engineering",
+      "scroll": 1024,
+      "height": 654.21875,
+      "selected": "План"
+    },
+    {
+      "width": 1024,
+      "design": "dispatch",
+      "scroll": 1024,
+      "height": 633.21875,
+      "selected": "План"
+    },
+    {
+      "width": 1024,
+      "design": "document",
+      "scroll": 1024,
+      "height": 773.7291870117188,
+      "selected": "Журнал"
+    },
+    {
+      "width": 736,
+      "design": "engineering",
+      "scroll": 736,
+      "height": 1027.78125,
+      "selected": "План"
+    },
+    {
+      "width": 736,
+      "design": "dispatch",
+      "scroll": 736,
+      "height": 1019.78125,
+      "selected": "План"
+    },
+    {
+      "width": 736,
+      "design": "document",
+      "scroll": 736,
+      "height": 1129.4583740234375,
+      "selected": "Журнал"
+    },
+    {
+      "width": 360,
+      "design": "engineering",
+      "scroll": 360,
+      "height": 1130.3958740234375,
+      "selected": "План"
+    },
+    {
+      "width": 360,
+      "design": "dispatch",
+      "scroll": 360,
+      "height": 1126.3958740234375,
+      "selected": "План"
+    },
+    {
+      "width": 360,
+      "design": "document",
+      "scroll": 343,
+      "height": 1267.416748046875,
+      "selected": "Журнал"
+    }
+  ],
+  "selected": "ОТ-002",
+  "checklist": true,
+  "errors": []
+}

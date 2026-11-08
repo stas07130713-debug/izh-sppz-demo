@@ -20,7 +20,7 @@ import type { CleanupOperation, PaletteEntry, RgbaImage } from './image.js';
 import type { Result } from './result.js';
 
 /** Что за файл загрузил пользователь. */
-export type PlanSourceKind = 'pdf' | 'image';
+export type PlanSourceKind = 'pdf' | 'image' | 'svg' | 'json' | 'dxf';
 
 /**
  * Сведения об одной странице PDF: только размеры и поворот.
@@ -109,6 +109,11 @@ export interface RasterizedImage {
 /** Сохранённая подложка плана. */
 export interface PlanBackdrop {
   readonly id: BackdropId;
+  /**
+   * Узел дерева, которому принадлежит подложка: здание — для генплана, этаж —
+   * для поэтажного плана. null — подложка загружена до появления привязки.
+   */
+  readonly nodeId: string | null;
   /** Исходный файл в хранилище. */
   readonly sourceHash: ContentHash;
   readonly sourceFileName: string;
@@ -212,6 +217,15 @@ export interface PlanSourceEngine {
 
   /** Читает размеры растрового файла, который пользователь загрузил вместо PDF. */
   probeImage(bytes: Uint8Array): Promise<Result<RasterizedImage>>;
+
+  /** Строит изображение подложки из SVG. */
+  rasterizeSvg(bytes: Uint8Array): Promise<Result<RasterizedImage>>;
+
+  /** Строит изображение подложки из простого DXF: линии и полилинии. */
+  rasterizeDxf(bytes: Uint8Array): Promise<Result<RasterizedImage>>;
+
+  /** Строит изображение подложки из JSON-описания: SVG или data URL. */
+  rasterizeJson(bytes: Uint8Array): Promise<Result<RasterizedImage>>;
 
   /** Считает метры на пиксель по двум точкам. Чистая арифметика. */
   metersPerPixelFromTwoPoints(input: TwoPointsInput): Result<number>;

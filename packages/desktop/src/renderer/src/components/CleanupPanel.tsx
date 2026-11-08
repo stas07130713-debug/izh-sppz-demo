@@ -45,15 +45,35 @@ export function CleanupPanel(props: CleanupPanelProps): React.JSX.Element {
     <div className="panel">
       <h3>Очистка подложки</h3>
       <p className="muted small">
-        Уберите с плана всё, кроме здания: стрелки эвакуации, уже расставленные значки, легенду и штамп.
-        Исходный файл при этом не меняется — очистку можно поправить или отменить в любой момент.
+        Сначала оставьте нужный фрагмент чертежа, затем подготовьте архитектурную основу: стены,
+        проёмы и лестницы. Исходный файл не меняется — очистку можно поправить или отменить.
       </p>
 
       <section>
-        <h4>Убрать всё цветное</h4>
+        <h4>1. Вырезать нужную область</h4>
+        <p className="muted small">Оставить только рабочий чертёж, убрав рамку, штамп и лишние поля.</p>
+        <button
+          type="button"
+          className={props.drawing === 'crop' ? 'primary' : ''}
+          onClick={() => props.onDraw(props.drawing === 'crop' ? null : 'crop')}
+        >
+          {props.drawing === 'crop' ? 'Обведите нужную область' : 'Вырезать нужную область'}
+        </button>
+        {state.crop !== null && (
+          <p className="muted small">
+            Обрезка {rectLabel(state.crop)}{' '}
+            <button type="button" className="link danger" onClick={() => onChange({ ...state, crop: null })}>
+              убрать
+            </button>
+          </p>
+        )}
+      </section>
+
+      <section>
+        <h4>2. Автоматически подготовить основу</h4>
         <p className="muted small">
-          Снимает зелёные стрелки, красные значки первичных средств и цветные зоны. Убирает и бледную
-          кайму вокруг них, и чёрную обводку значков — иначе на месте значка остаётся пустая рамка.
+          Для планов эвакуации убирает цветные маршруты и значки, но короткие разрывы стен восстанавливает,
+          если линия продолжается с двух сторон. Для сканов можно отдельно оставить только тёмный контур.
         </p>
         <label className="checkbox">
           <input
@@ -79,26 +99,64 @@ export function CleanupPanel(props: CleanupPanelProps): React.JSX.Element {
             </div>
             <p className="muted small">
               {state.strength === 'light' && 'Только явно цветное. Ничего лишнего не заденет.'}
-              {state.strength === 'normal' && 'Плюс кайма сглаживания и значки целиком, вместе с обводкой.'}
+              {state.strength === 'normal' && 'Плюс кайма сглаживания. Чёрные стены и обводки не трогает.'}
               {state.strength === 'strong' &&
-                'Ловит бледные заливки и крупные значки. Может задеть цветные подписи, если они есть на чертеже.'}
+                'Ловит бледные заливки. Чёрные остатки значков удаляйте областью или щелчком.'}
             </p>
           </>
+        )}
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={state.removeTextLike}
+            onChange={(e) => onChange({ ...state, removeTextLike: e.target.checked })}
+          />
+          <span>Убирать мелкие подписи</span>
+        </label>
+        {state.removeTextLike && (
+          <label className="field">
+            <span>Сила: {state.textMaxPixels}. Больше — убирается больше мелких элементов</span>
+            <input
+              type="range"
+              min={200}
+              max={2500}
+              step={100}
+              value={state.textMaxPixels}
+              onChange={(e) => onChange({ ...state, textMaxPixels: Number(e.target.value) })}
+            />
+          </label>
+        )}
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={state.keepDark}
+            onChange={(e) => onChange({ ...state, keepDark: e.target.checked })}
+          />
+          <span>Убирать светлое</span>
+        </label>
+        {state.keepDark && (
+          <label className="field">
+            <span>Порог яркости: {state.luminanceThreshold}. Больше — убирается больше</span>
+            <input
+              type="range"
+              min={60}
+              max={250}
+              value={state.luminanceThreshold}
+              onChange={(e) => onChange({ ...state, luminanceThreshold: Number(e.target.value) })}
+            />
+          </label>
         )}
       </section>
 
       <section>
-        <h4>Убрать значок щелчком</h4>
-        <p className="muted small">
-          Щёлкните по значку, стрелке или подписи — уйдёт вся фигура целиком. Работает и на
-          одноцветном чертеже, где значки нарисованы тем же чёрным, что и стены.
-        </p>
+        <h4>3. Ручная доочистка</h4>
+        <p className="muted small">Если автоматике не хватило контекста, уберите лишнее точечно.</p>
         <button
           type="button"
           className={props.pickingComponents ? 'primary' : ''}
           onClick={props.onPickComponents}
         >
-          {props.pickingComponents ? 'Щёлкайте по лишнему — нажмите для завершения' : 'Убирать значки щелчком'}
+          {props.pickingComponents ? 'Щёлкайте по лишнему — нажмите для завершения' : 'Убрать фигуру щелчком'}
         </button>
         {state.removedComponents.length > 0 && (
           <p className="muted small">
@@ -112,11 +170,7 @@ export function CleanupPanel(props: CleanupPanelProps): React.JSX.Element {
             </button>
           </p>
         )}
-      </section>
-
-      <section>
-        <h4>Убрать отдельные цвета</h4>
-        <p className="muted small">Основные цвета плана. Щёлкните тот, который нужно убрать.</p>
+        <p className="muted small">Или выберите цвет из палитры, который нужно убрать.</p>
         <div className="palette">
           {props.palette.map((entry) => {
             const active = state.removedColors.some(
@@ -152,17 +206,12 @@ export function CleanupPanel(props: CleanupPanelProps): React.JSX.Element {
           })}
           {props.palette.length === 0 && <span className="muted small">Палитра ещё не построена.</span>}
         </div>
-      </section>
-
-      <section>
-        <h4>Стереть области</h4>
-        <p className="muted small">Легенда, экспликация, таблицы, роза ветров, подписи.</p>
         <button
           type="button"
           className={props.drawing === 'erase' ? 'primary' : ''}
           onClick={() => props.onDraw(props.drawing === 'erase' ? null : 'erase')}
         >
-          {props.drawing === 'erase' ? 'Обводите области — нажмите для завершения' : 'Стереть область'}
+          {props.drawing === 'erase' ? 'Обведите ненужное — нажмите для завершения' : 'Удалить ненужную область'}
         </button>
         {state.eraseRects.length > 0 && (
           <ul className="rect-list">
@@ -184,51 +233,6 @@ export function CleanupPanel(props: CleanupPanelProps): React.JSX.Element {
         )}
       </section>
 
-      <section>
-        <h4>Обрезка</h4>
-        <p className="muted small">Оставить только чертёж, убрав рамку и штамп. Выполняется последней.</p>
-        <button
-          type="button"
-          className={props.drawing === 'crop' ? 'primary' : ''}
-          onClick={() => props.onDraw(props.drawing === 'crop' ? null : 'crop')}
-        >
-          {props.drawing === 'crop' ? 'Обведите область чертежа' : 'Задать обрезку'}
-        </button>
-        {state.crop !== null && (
-          <p className="muted small">
-            Обрезка {rectLabel(state.crop)}{' '}
-            <button type="button" className="link danger" onClick={() => onChange({ ...state, crop: null })}>
-              убрать
-            </button>
-          </p>
-        )}
-      </section>
-
-      <section>
-        <h4>Оставить только тёмное</h4>
-        <p className="muted small">Убирает светлую заливку, штриховку и серость скана.</p>
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={state.keepDark}
-            onChange={(e) => onChange({ ...state, keepDark: e.target.checked })}
-          />
-          <span>Убирать светлое</span>
-        </label>
-        {state.keepDark && (
-          <label className="field">
-            <span>Порог яркости: {state.luminanceThreshold}. Больше — убирается больше</span>
-            <input
-              type="range"
-              min={60}
-              max={250}
-              value={state.luminanceThreshold}
-              onChange={(e) => onChange({ ...state, luminanceThreshold: Number(e.target.value) })}
-            />
-          </label>
-        )}
-      </section>
-
       <div className="actions">
         {props.applied && (
           <button type="button" className="secondary" onClick={props.onReset} disabled={props.busy}>
@@ -241,7 +245,7 @@ export function CleanupPanel(props: CleanupPanelProps): React.JSX.Element {
           disabled={props.busy || !hasAnything(state)}
           onClick={props.onApply}
         >
-          {props.busy ? 'Обрабатывается…' : 'Применить к подложке'}
+          {props.busy ? 'Обрабатывается…' : 'Сохранить подложку и перейти к масштабу'}
         </button>
       </div>
     </div>

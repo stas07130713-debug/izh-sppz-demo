@@ -12,7 +12,7 @@
  * геометрию, не прося пользователя искать файл заново.
  */
 
-import type { PlanBackdrop, QuarterTurn, Result } from '@izh/contracts';
+import type { PlanBackdrop, PlanSourceKind, QuarterTurn, RasterizedImage, Result } from '@izh/contracts';
 import { err, ok } from '@izh/contracts';
 import type { BackdropDeps } from './backdrop-deps.js';
 
@@ -22,6 +22,8 @@ export interface CreateBackdropFromPdfInput {
   readonly pageNumber: number;
   readonly dpi: number;
   readonly extraRotationDeg: QuarterTurn;
+  /** Узел дерева, для которого готовится подложка: здание или этаж. */
+  readonly nodeId?: string | null;
 }
 
 export async function createBackdropFromPdf(
@@ -47,6 +49,7 @@ export async function createBackdropFromPdf(
 
   const backdrop: PlanBackdrop = {
     id: deps.ids.newId(),
+    nodeId: input.nodeId ?? null,
     sourceHash: sourceHash.value,
     sourceFileName: input.sourceFileName,
     sourceKind: 'pdf',
@@ -66,9 +69,60 @@ export async function createBackdropFromPdf(
   return ok(backdrop);
 }
 
+export interface CreateBackdropFromSourceInput {
+  readonly sourceBytes: Uint8Array;
+  readonly sourceFileName: string;
+  readonly pageNumber?: number;
+  readonly dpi?: number;
+  readonly extraRotationDeg?: QuarterTurn;
+  readonly nodeId?: string | null;
+}
+
+export async function createBackdropFromSource(
+  deps: BackdropDeps,
+  input: CreateBackdropFromSourceInput,
+): Promise<Result<PlanBackdrop>> {
+  const kind = deps.engine.detectKind(input.sourceBytes);
+  if (kind === null) {
+    return err('UNSUPPORTED_FORMAT', 'Формат подложки не поддерживается.');
+  }
+
+  const rasterized = await rasterizeSource(deps, input, kind);
+  if (!rasterized.ok) return rasterized;
+
+  const sourceHash = await deps.fileStore.put(input.sourceBytes, sourceExtension(kind, input.sourceFileName));
+  if (!sourceHash.ok) return sourceHash;
+
+  const imageHash = await deps.fileStore.put(rasterized.value.imageBytes, 'png');
+  if (!imageHash.ok) return imageHash;
+
+  const backdrop: PlanBackdrop = {
+    id: deps.ids.newId(),
+    nodeId: input.nodeId ?? null,
+    sourceHash: sourceHash.value,
+    sourceFileName: input.sourceFileName,
+    sourceKind: kind,
+    pageNumber: kind === 'pdf' ? input.pageNumber ?? 1 : 1,
+    dpi: rasterized.value.dpi,
+    rotationDeg: kind === 'pdf' ? input.extraRotationDeg ?? 0 : 0,
+    crop: null,
+    widthPx: rasterized.value.widthPx,
+    heightPx: rasterized.value.heightPx,
+    imageHash: imageHash.value,
+    createdAt: deps.clock.nowUtc(),
+  };
+
+  const saved = await deps.backdrops.save(backdrop);
+  if (!saved.ok) return saved;
+
+  return ok(backdrop);
+}
+
 export interface CreateBackdropFromImageInput {
   readonly sourceBytes: Uint8Array;
   readonly sourceFileName: string;
+  /** Узел дерева, для которого готовится подложка: здание или этаж. */
+  readonly nodeId?: string | null;
 }
 
 export async function createBackdropFromImage(
@@ -88,6 +142,7 @@ export async function createBackdropFromImage(
 
   const backdrop: PlanBackdrop = {
     id: deps.ids.newId(),
+    nodeId: input.nodeId ?? null,
     // Для картинки исходный файл и изображение подложки — это одно и то же,
     // поэтому в хранилище лежит один файл, а не две копии.
     sourceHash: imageHash.value,
@@ -107,4 +162,43 @@ export async function createBackdropFromImage(
   if (!saved.ok) return saved;
 
   return ok(backdrop);
+}
+
+function rasterizeSource(
+  deps: BackdropDeps,
+  input: CreateBackdropFromSourceInput,
+  kind: PlanSourceKind,
+): Promise<Result<RasterizedImage>> {
+  if (kind === 'pdf') {
+    return deps.engine.rasterizePdfPage(input.sourceBytes, {
+      pageNumber: input.pageNumber ?? 1,
+      dpi: input.dpi ?? 150,
+      extraRotationDeg: input.extraRotationDeg ?? 0,
+    });
+  }
+  if (kind === 'image') return rasterizeImageAsPng(deps, input.sourceBytes);
+  if (kind === 'svg') return deps.engine.rasterizeSvg(input.sourceBytes);
+  if (kind === 'dxf') return deps.engine.rasterizeDxf(input.sourceBytes);
+  return deps.engine.rasterizeJson(input.sourceBytes);
+}
+
+async function rasterizeImageAsPng(deps: BackdropDeps, bytes: Uint8Array): Promise<Result<RasterizedImage>> {
+  const decoded = await deps.engine.decodeImage(bytes);
+  if (!decoded.ok) return decoded;
+  const encoded = await deps.engine.encodePng(decoded.value);
+  if (!encoded.ok) return encoded;
+  return ok({
+    widthPx: decoded.value.widthPx,
+    heightPx: decoded.value.heightPx,
+    dpi: null,
+    imageBytes: encoded.value,
+    mimeType: 'image/png',
+  });
+}
+
+function sourceExtension(kind: PlanSourceKind, fileName: string): string {
+  const found = fileName.split('.').pop();
+  if (found !== undefined && found.trim().length > 0) return found.toLowerCase();
+  if (kind === 'image') return 'png';
+  return kind;
 }

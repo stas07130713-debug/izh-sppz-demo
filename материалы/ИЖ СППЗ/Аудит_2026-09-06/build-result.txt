@@ -1,0 +1,46 @@
+
+> izh-sppz@0.1.0 build
+> npm run build --workspace @izh/desktop
+
+
+> @izh/desktop@0.1.0 build
+> electron-vite build
+
+vite v5.4.21 building SSR bundle for production...
+transforming...
+✓ 44 modules transformed.
+rendering chunks...
+out/main/index.js  69.22 kB
+✓ built in 296ms
+vite v5.4.21 building SSR bundle for production...
+transforming...
+✓ 2 modules transformed.
+rendering chunks...
+out/preload/index.js  9.92 kB
+✓ built in 26ms
+vite v5.4.21 building for production...
+transforming...
+✓ 362 modules transformed.
+rendering chunks...
+../../out/renderer/index.html                             0.39 kB
+../../out/renderer/assets/07-Z7un1rMj.png                22.33 kB
+../../out/renderer/assets/05-DoGjhDZa.png                22.76 kB
+../../out/renderer/assets/15-D06ciZsy.png                23.35 kB
+../../out/renderer/assets/04-D6zfpU05.png                23.48 kB
+../../out/renderer/assets/13-KYbnp5Jg.png                24.75 kB
+../../out/renderer/assets/17-BspPGf6J.png                24.99 kB
+../../out/renderer/assets/01-B42-96YE.png                26.01 kB
+../../out/renderer/assets/16-BGkCOzSJ.png                26.11 kB
+../../out/renderer/assets/11-CX5tUlvU.png                27.24 kB
+../../out/renderer/assets/14--7P4MNZd.png                27.57 kB
+../../out/renderer/assets/08-CK_01VBb.png                28.12 kB
+../../out/renderer/assets/03-CqATbE1b.png                28.20 kB
+../../out/renderer/assets/18-1dlCUgOB.png                28.59 kB
+../../out/renderer/assets/02-N2TCFuA9.png                29.21 kB
+../../out/renderer/assets/10-o9NEjX_0.png                31.80 kB
+../../out/renderer/assets/09-TGmfEwPn.png                39.52 kB
+../../out/renderer/assets/pdf.worker.min-WJoE4A5c.js  1,899.78 kB
+../../out/renderer/assets/index-CoegApQo.css            126.13 kB
+../../out/renderer/assets/index-1J8l1ql3.js           2,013.56 kB
+✓ built in 4.81s
+

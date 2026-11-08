@@ -10,8 +10,9 @@
 import type { PlanSourceEngine } from '@izh/contracts';
 import { detectKind } from './detect-kind.js';
 import { applyCleanup, downscale, samplePalette } from './image-ops.js';
+export { rotateImage, eraseColoredInArea, changesExtent, drawLine } from './image-area-ops.js';
 import { inspectPdfPage, probePdf } from './pdf-probe.js';
-import { decodeImage, encodePng, probeImage, rasterizePdfPage } from './raster.js';
+import { decodeImage, encodePng, probeImage, rasterizeDxf, rasterizeJson, rasterizePdfPage, rasterizeSvg } from './raster.js';
 import {
   estimateRasterSize,
   measureByBuildingExtents,
@@ -28,6 +29,9 @@ export const planSourceEngine: PlanSourceEngine = {
   estimateRasterSize,
   rasterizePdfPage,
   probeImage,
+  rasterizeSvg,
+  rasterizeDxf,
+  rasterizeJson,
   metersPerPixelFromTwoPoints,
   metersPerPixelFromDrawingScale,
   measureByBuildingExtents,
@@ -56,6 +60,7 @@ export {
   removeColor,
   removeColored,
   removeComponentAt,
+  removeSmallComponents,
   scaleOperations,
 } from './image-ops.js';
 export type { ComponentSummary } from './components.js';

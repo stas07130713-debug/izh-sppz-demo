@@ -1,0 +1,553 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-08-22",
+  "description": "Централизованный стартовый справочник огнетушителей ИЖ СППЗ. PDF не хранятся локально; допускаются только официальные адреса изготовителей. Каждая ссылка проверена запросом: записаны код ответа, тип и размер ответа.",
+  "manufacturers": [
+    {
+      "manufacturerId": "bontel",
+      "manufacturerName": "BONTEL",
+      "officialSite": "https://bontel.ru",
+      "series": [
+        {
+          "type": "ОВЭ",
+          "sizes": [
+            "1",
+            "2",
+            "5",
+            "10"
+          ],
+          "brand": "BONTEL",
+          "serviceLifeYears": 20,
+          "passportUrl": "https://bontel.effinity-back.ru/uploads/product/12/%D0%A0%D0%AD_%D0%9F%D0%B5%D1%80%D0%B5%D0%B4%D0%B2%D0%B8%D0%B6%D0%BD%D1%8B%D0%B5_%D0%B8_%D0%BF%D0%B5%D1%80%D0%B5%D0%BD%D0%BE%D1%81%D0%BD%D1%8B%D0%B5_%D0%BE%D0%B3%D0%BD%D0%B5%D1%82%D1%83%D1%88%D0%B8%D1%82%D0%B5%D0%BB%D0%B8.pdf",
+          "passportSource": "Руководство по эксплуатации переносных и передвижных огнетушителей BONTEL, ссылка с официальной страницы изделия. Проверено 30.08.2026: PDF, 934 КБ.",
+          "passportRevision": null,
+          "notes": "Паспорт открывается по официальной ссылке производителя.",
+          "officialUrl": "https://bontel.ru/production/ognetushitel"
+        },
+        {
+          "type": "ОВЭ",
+          "sizes": [
+            "25"
+          ],
+          "brand": "BONTEL",
+          "serviceLifeYears": null,
+          "passportUrl": "https://bontel.effinity-back.ru/uploads/product/12/%D0%A0%D0%AD_%D0%9F%D0%B5%D1%80%D0%B5%D0%B4%D0%B2%D0%B8%D0%B6%D0%BD%D1%8B%D0%B5_%D0%B8_%D0%BF%D0%B5%D1%80%D0%B5%D0%BD%D0%BE%D1%81%D0%BD%D1%8B%D0%B5_%D0%BE%D0%B3%D0%BD%D0%B5%D1%82%D1%83%D1%88%D0%B8%D1%82%D0%B5%D0%BB%D0%B8.pdf",
+          "passportSource": "Руководство по эксплуатации переносных и передвижных огнетушителей BONTEL, ссылка с официальной страницы изделия. Проверено 30.08.2026: PDF, 934 КБ.",
+          "passportRevision": null,
+          "notes": "Паспорт открывается по официальной ссылке производителя.",
+          "officialUrl": "https://bontel.ru/production/ognetushitel"
+        }
+      ],
+      "documentHosts": [
+        "bontel.effinity-back.ru"
+      ]
+    },
+    {
+      "manufacturerId": "yarpozhinvest",
+      "manufacturerName": "Ярпожинвест",
+      "officialSite": "http://www.yarpojinvest.ru",
+      "series": [
+        {
+          "type": "ОП",
+          "sizes": [
+            "0,5",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "12",
+            "20",
+            "25",
+            "35",
+            "40",
+            "50",
+            "70",
+            "75",
+            "100"
+          ],
+          "brand": "Ярпожинвест",
+          "serviceLifeYears": 10,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "http://www.yarpojinvest.ru/products/OP/"
+        },
+        {
+          "type": "ОУ",
+          "sizes": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "10",
+            "15",
+            "20",
+            "25",
+            "40",
+            "50",
+            "55"
+          ],
+          "brand": "Ярпожинвест",
+          "serviceLifeYears": 10,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "http://www.yarpojinvest.ru/products/OU/"
+        },
+        {
+          "type": "ОВП",
+          "sizes": [
+            "6",
+            "8",
+            "10",
+            "40",
+            "50",
+            "80"
+          ],
+          "brand": "Ярпожинвест",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "http://www.yarpojinvest.ru/products/OVP/"
+        },
+        {
+          "type": "ОВЭ",
+          "sizes": [
+            "4",
+            "10"
+          ],
+          "brand": "Ярпожинвест",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "http://www.yarpojinvest.ru/"
+        }
+      ]
+    },
+    {
+      "manufacturerId": "rusarsenal",
+      "manufacturerName": "НПО РУСАРСЕНАЛ",
+      "officialSite": "https://rusarsenal.ru",
+      "series": [
+        {
+          "type": "ОП",
+          "sizes": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "8",
+            "10",
+            "25",
+            "35",
+            "50",
+            "70",
+            "100"
+          ],
+          "brand": "НПО РУСАРСЕНАЛ",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "https://rusarsenal.ru/catalog/fire-extinguishers/powder/"
+        },
+        {
+          "type": "ОУ",
+          "sizes": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "10",
+            "15",
+            "20",
+            "25",
+            "40",
+            "50",
+            "55"
+          ],
+          "brand": "НПО РУСАРСЕНАЛ",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "https://rusarsenal.ru/catalog/fire-extinguishers/carbon-dioxide/"
+        }
+      ]
+    },
+    {
+      "manufacturerId": "pozhtekhnika",
+      "manufacturerName": "Пожтехника",
+      "officialSite": "https://ptc01.ru",
+      "series": [
+        {
+          "type": "ОП",
+          "sizes": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "8",
+            "10"
+          ],
+          "brand": "Пожтехника",
+          "serviceLifeYears": 10,
+          "passportUrl": "https://ptc01.ru/pdf/tech-spec-extinguishers.pdf",
+          "passportSource": "Технические характеристики огнетушителей ЗАО «Пожтехника». Проверено 30.08.2026: PDF, 304 КБ.",
+          "passportRevision": null,
+          "notes": "Общий документ на линейку, а не паспорт одного изделия.",
+          "officialUrl": "https://ptc01.ru/production/ognetushiteli_poroshkovye_mig/"
+        },
+        {
+          "type": "ОУ",
+          "sizes": [
+            "2",
+            "3",
+            "5",
+            "7",
+            "10",
+            "20",
+            "40",
+            "55"
+          ],
+          "brand": "Пожтехника",
+          "serviceLifeYears": 10,
+          "passportUrl": "https://ptc01.ru/pdf/tech-spec-extinguishers.pdf",
+          "passportSource": "Технические характеристики огнетушителей ЗАО «Пожтехника». Проверено 30.08.2026: PDF, 304 КБ.",
+          "passportRevision": null,
+          "notes": "Общий документ на линейку, а не паспорт одного изделия.",
+          "officialUrl": "https://ptc01.ru/production/"
+        }
+      ]
+    },
+    {
+      "manufacturerId": "iney",
+      "manufacturerName": "ИНЕЙ",
+      "officialSite": "https://ptc01.ru",
+      "series": [
+        {
+          "type": "ОУ",
+          "sizes": [
+            "2",
+            "3",
+            "5",
+            "7"
+          ],
+          "brand": "ИНЕЙ",
+          "serviceLifeYears": 15,
+          "passportUrl": "https://ptc01.ru/pdf/tech-spec-extinguishers.pdf",
+          "passportSource": "Технические характеристики огнетушителей ЗАО «Пожтехника». Проверено 30.08.2026: PDF, 304 КБ.",
+          "passportRevision": null,
+          "notes": "Общий документ на линейку, а не паспорт одного изделия.",
+          "officialUrl": "https://ptc01.ru/production/khladonovye_ognetushiteli_iney/"
+        }
+      ]
+    },
+    {
+      "manufacturerId": "mig",
+      "manufacturerName": "МИГ",
+      "officialSite": "https://ptc01.ru",
+      "series": [
+        {
+          "type": "ОП",
+          "sizes": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "8",
+            "10",
+            "25",
+            "35",
+            "50",
+            "70",
+            "100"
+          ],
+          "brand": "МИГ",
+          "serviceLifeYears": null,
+          "passportUrl": "https://ptc01.ru/pdf/tech-spec-extinguishers.pdf",
+          "passportSource": "Технические характеристики огнетушителей ЗАО «Пожтехника». Проверено 30.08.2026: PDF, 304 КБ.",
+          "passportRevision": null,
+          "notes": "Общий документ на линейку, а не паспорт одного изделия.",
+          "officialUrl": "https://ptc01.ru/production/ognetushiteli_poroshkovye_mig/"
+        },
+        {
+          "type": "ОУ",
+          "sizes": [
+            "2",
+            "3",
+            "5",
+            "7",
+            "10",
+            "20",
+            "40"
+          ],
+          "brand": "МИГ",
+          "serviceLifeYears": null,
+          "passportUrl": "https://ptc01.ru/pdf/tech-spec-extinguishers.pdf",
+          "passportSource": "Технические характеристики огнетушителей ЗАО «Пожтехника». Проверено 30.08.2026: PDF, 304 КБ.",
+          "passportRevision": null,
+          "notes": "Общий документ на линейку, а не паспорт одного изделия.",
+          "officialUrl": "https://ptc01.ru/production/"
+        },
+        {
+          "type": "ОВП",
+          "sizes": [
+            "4",
+            "6",
+            "8",
+            "10"
+          ],
+          "brand": "МИГ",
+          "serviceLifeYears": null,
+          "passportUrl": "https://ptc01.ru/pdf/tech-spec-extinguishers.pdf",
+          "passportSource": "Технические характеристики огнетушителей ЗАО «Пожтехника». Проверено 30.08.2026: PDF, 304 КБ.",
+          "passportRevision": null,
+          "notes": "Общий документ на линейку, а не паспорт одного изделия.",
+          "officialUrl": "https://ptc01.ru/production/ognetushiteli_vozdushno_pennye_mig_s_ftorsoderzhashchim_zaryadom_zakachnye/"
+        }
+      ]
+    },
+    {
+      "manufacturerId": "rif",
+      "manufacturerName": "РИФ",
+      "officialSite": "https://rifgroup.ru",
+      "series": [
+        {
+          "type": "ОВЭ",
+          "sizes": [
+            "2",
+            "4",
+            "5"
+          ],
+          "brand": "РИФ",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "https://rifgroup.ru/produktsiya/ognetushiteli/voem/"
+        },
+        {
+          "type": "ОП",
+          "sizes": [
+            "25",
+            "35",
+            "40"
+          ],
+          "brand": "РИФ",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "https://rifgroup.ru/produktsiya/ognetushiteli/"
+        }
+      ]
+    },
+    {
+      "manufacturerId": "farro",
+      "manufacturerName": "НПО ФАРРО",
+      "officialSite": "https://npo-farro.ru",
+      "series": [
+        {
+          "type": "ОВЭ",
+          "sizes": [
+            "2",
+            "4",
+            "5",
+            "6",
+            "8",
+            "10"
+          ],
+          "brand": "FARRO",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "https://npo-farro.ru/ognetushiteli-ove"
+        }
+      ]
+    },
+    {
+      "manufacturerId": "poznanotech",
+      "manufacturerName": "Пожнанотех",
+      "officialSite": "https://poznanotech.ru",
+      "series": [
+        {
+          "type": "ОВЭ",
+          "sizes": [
+            "2",
+            "4",
+            "5",
+            "6",
+            "8",
+            "10",
+            "20",
+            "25",
+            "40",
+            "50",
+            "80",
+            "100"
+          ],
+          "brand": "Пожнанотех",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "https://poznanotech.ru/"
+        }
+      ]
+    },
+    {
+      "manufacturerId": "bonus-vita",
+      "manufacturerName": "Бонус-Вита",
+      "officialSite": "https://xn----7sbbfcqfo2cfcafdeligxl0qh.xn--p1ai",
+      "series": [
+        {
+          "type": "ОП",
+          "sizes": [
+            "0,5",
+            "2",
+            "4",
+            "6"
+          ],
+          "brand": "Бонус-Вита",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "https://xn----7sbbfcqfo2cfcafdeligxl0qh.xn--p1ai/catalog/Ognetushiteli-ABCE"
+        },
+        {
+          "type": "ОУ",
+          "sizes": [
+            "2"
+          ],
+          "brand": "Бонус-Вита",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "https://xn----7sbbfcqfo2cfcafdeligxl0qh.xn--p1ai/catalog/Ognetushiteli-BCE"
+        }
+      ]
+    },
+    {
+      "manufacturerId": "melanti",
+      "manufacturerName": "МЕЛАНТИ",
+      "officialSite": "https://melanti.com",
+      "series": [
+        {
+          "type": "ОП",
+          "sizes": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "8",
+            "10"
+          ],
+          "brand": "МЕЛАНТИ",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "https://melanti.com/catalog/ognetushiteli/"
+        },
+        {
+          "type": "ОУ",
+          "sizes": [
+            "2",
+            "3",
+            "5"
+          ],
+          "brand": "МЕЛАНТИ",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Паспорта отдельным файлом изготовитель не публикует: сведения — на официальной странице изделия.",
+          "passportRevision": null,
+          "notes": "Открывается официальная страница изделия; паспорт — в бумажном комплекте поставки.",
+          "officialUrl": "https://melanti.com/catalog/ognetushiteli-uglekislotnye/"
+        }
+      ]
+    },
+    {
+      "manufacturerId": "vesta",
+      "manufacturerName": "Веста",
+      "officialSite": "",
+      "series": [
+        {
+          "type": "ОП",
+          "sizes": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "8",
+            "10"
+          ],
+          "brand": "Веста",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Официальной страницы изделия найти не удалось: сайт изготовителя не установлен.",
+          "passportRevision": null,
+          "notes": "Ни страницы, ни паспорта: заполняйте карточку по бумажному паспорту изделия.",
+          "officialUrl": null
+        },
+        {
+          "type": "ОУ",
+          "sizes": [
+            "2",
+            "3",
+            "5"
+          ],
+          "brand": "Веста",
+          "serviceLifeYears": null,
+          "passportUrl": null,
+          "passportSource": "Официальной страницы изделия найти не удалось: сайт изготовителя не установлен.",
+          "passportRevision": null,
+          "notes": "Ни страницы, ни паспорта: заполняйте карточку по бумажному паспорту изделия.",
+          "officialUrl": null
+        }
+      ]
+    }
+  ],
+  "linksCheckedOn": "2026-08-30"
+}

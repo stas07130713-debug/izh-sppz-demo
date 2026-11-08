@@ -6,7 +6,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { access, readFile, writeFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ContentHash, FileStore, Result } from '@izh/contracts';
 import { describeUnknown, err, ok } from '@izh/contracts';
@@ -22,17 +22,15 @@ function fileNameFor(hash: string, extension: string): string {
   return `${hash}.${extension}`;
 }
 
-async function findExistingPath(hash: ContentHash): Promise<string | null> {
-  for (const extension of ['pdf', 'png', 'jpg']) {
-    const candidate = join(filesDir(), fileNameFor(hash, extension));
-    try {
-      await access(candidate);
-      return candidate;
-    } catch {
-      // Файла с таким расширением нет — пробуем следующее.
-    }
+export async function storedFilePath(hash: ContentHash): Promise<string | null> {
+  try {
+    const names = await readdir(filesDir());
+    const prefix = `${hash}.`;
+    const name = names.find((item) => item.startsWith(prefix)) ?? null;
+    return name === null ? null : join(filesDir(), name);
+  } catch {
+    return null;
   }
-  return null;
 }
 
 export function createFileStore(): FileStore {
@@ -44,7 +42,7 @@ export function createFileStore(): FileStore {
         const path = join(filesDir(), fileNameFor(hash, extension));
 
         // Если файл с таким содержимым уже лежит, второй раз его не пишем.
-        const existing = await findExistingPath(hash);
+        const existing = await storedFilePath(hash);
         if (existing === null) {
           await writeFile(path, bytes);
         }
@@ -57,7 +55,7 @@ export function createFileStore(): FileStore {
 
     async get(hash: ContentHash): Promise<Result<Uint8Array>> {
       try {
-        const path = await findExistingPath(hash);
+        const path = await storedFilePath(hash);
         if (path === null) return err('FILE_NOT_FOUND', 'Файл не найден в хранилище.');
         const buffer = await readFile(path);
         return ok(new Uint8Array(buffer));
@@ -68,7 +66,7 @@ export function createFileStore(): FileStore {
 
     async exists(hash: ContentHash): Promise<Result<boolean>> {
       try {
-        return ok((await findExistingPath(hash)) !== null);
+        return ok((await storedFilePath(hash)) !== null);
       } catch (e) {
         return err('FILE_READ_FAILED', 'Не удалось проверить наличие файла.', describeUnknown(e));
       }

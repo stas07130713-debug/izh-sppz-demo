@@ -18,13 +18,21 @@ import type {
   ContentHash,
   FileStore,
   IdGenerator,
+  MaintenanceEvent,
+  MaintenanceEventRepository,
+  ObjectTreeRepository,
   PdfDocumentInfo,
   PdfPageContentInfo,
   PlanBackdrop,
   PlanCalibration,
+  PlanObject,
+  PlanObjectRepository,
   PlanSourceEngine,
   RasterizedImage,
   Result,
+  Room,
+  RoomRepository,
+  TreeNode,
 } from '@izh/contracts';
 import { err, ok } from '@izh/contracts';
 
@@ -109,6 +117,94 @@ export function fakeBackdropRepository(): BackdropRepository {
   };
 }
 
+/** Поддельное хранилище дерева объекта. Держит узлы в памяти. */
+export function fakeTreeRepository(): ObjectTreeRepository {
+  const nodes = new Map<string, TreeNode>();
+  return {
+    async list() {
+      return ok([...nodes.values()]);
+    },
+    async getById(id) {
+      const found = nodes.get(id);
+      if (found === undefined) return err('NOT_FOUND', `Нет узла ${id}.`);
+      return ok(found);
+    },
+    async save(node) {
+      nodes.set(node.id, node);
+      return ok(undefined);
+    },
+  };
+}
+
+/** Поддельное хранилище объектов СППЗ. Держит записи в памяти. */
+export function fakePlanObjectRepository(): PlanObjectRepository {
+  const objects = new Map<string, PlanObject>();
+  return {
+    async list() {
+      return ok([...objects.values()]);
+    },
+    async listByNode(nodeId) {
+      return ok([...objects.values()].filter((object) => object.nodeId === nodeId));
+    },
+    async getById(id) {
+      const found = objects.get(id);
+      if (found === undefined) return err('NOT_FOUND', `Нет объекта ${id}.`);
+      return ok(found);
+    },
+    async save(object) {
+      objects.set(object.id, object);
+      return ok(undefined);
+    },
+    async saveMany(list) {
+      for (const object of list) objects.set(object.id, object);
+      return ok(undefined);
+    },
+  };
+}
+
+/** Поддельное хранилище помещений. */
+export function fakeRoomRepository(): RoomRepository {
+  const rooms = new Map<string, Room>();
+  return {
+    async listByLevel(levelId) {
+      return ok([...rooms.values()].filter((room) => room.levelId === levelId));
+    },
+    async list() {
+      return ok([...rooms.values()]);
+    },
+    async getById(id) {
+      const found = rooms.get(id);
+      if (found === undefined) return err('NOT_FOUND', `Нет помещения ${id}.`);
+      return ok(found);
+    },
+    async save(room) {
+      rooms.set(room.id, room);
+      return ok(undefined);
+    },
+  };
+}
+
+/** Поддельное хранилище мероприятий. Ничего не удаляет и не правит — как настоящее. */
+export function fakeMaintenanceEventRepository(): MaintenanceEventRepository {
+  const events = new Map<string, MaintenanceEvent>();
+  return {
+    async list() {
+      return ok([...events.values()]);
+    },
+    async listByObject(objectId) {
+      return ok([...events.values()].filter((event) => event.objectId === objectId));
+    },
+    async save(event) {
+      events.set(event.id, event);
+      return ok(undefined);
+    },
+    async saveMany(list) {
+      for (const event of list) events.set(event.id, event);
+      return ok(undefined);
+    },
+  };
+}
+
 export interface FakeEngineOptions {
   readonly rasterized?: RasterizedImage;
   readonly rasterizeError?: boolean;
@@ -146,6 +242,10 @@ export function fakeEngine(options: FakeEngineOptions = {}): PlanSourceEngine {
     detectKind(bytes) {
       if (bytes.length >= 5 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44) return 'pdf';
       if (bytes.length >= 4 && bytes[0] === 0x89 && bytes[1] === 0x50) return 'image';
+      const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes).trimStart().toLocaleLowerCase('ru');
+      if (text.startsWith('<svg') || text.includes('<svg')) return 'svg';
+      if (text.startsWith('{') || text.startsWith('[')) return 'json';
+      if (text.includes('section') && text.includes('entities') && text.includes('line')) return 'dxf';
       return null;
     },
 
@@ -174,6 +274,18 @@ export function fakeEngine(options: FakeEngineOptions = {}): PlanSourceEngine {
     },
 
     async probeImage(): Promise<Result<RasterizedImage>> {
+      return ok({ ...rasterized, dpi: null, mimeType: 'image/png' });
+    },
+
+    async rasterizeSvg(): Promise<Result<RasterizedImage>> {
+      return ok({ ...rasterized, dpi: null, mimeType: 'image/png' });
+    },
+
+    async rasterizeDxf(): Promise<Result<RasterizedImage>> {
+      return ok({ ...rasterized, dpi: null, mimeType: 'image/png' });
+    },
+
+    async rasterizeJson(): Promise<Result<RasterizedImage>> {
       return ok({ ...rasterized, dpi: null, mimeType: 'image/png' });
     },
 
@@ -257,4 +369,8 @@ export function pngBytes(length = 300): Uint8Array {
   const bytes = new Uint8Array(length);
   bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
   return bytes;
+}
+
+export function textBytes(text: string): Uint8Array {
+  return new TextEncoder().encode(text);
 }

@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import type { PdfDocumentInfo, PdfPageContentInfo, PdfPageInfo, QuarterTurn } from '@izh/contracts';
 import { DPI_PRESETS, planSourceEngine } from '@izh/engine-plan-source';
 import { formatMegapixels, formatPageSizeMm, formatPixels } from '../format';
+import { SelectField } from './SelectField';
 
 export interface ImportWizardProps {
   readonly fileName: string;
@@ -54,37 +55,37 @@ export function ImportWizard(props: ImportWizardProps): React.JSX.Element {
       {props.documentInfo.pageCount > 1 && (
         <label className="field">
           <span>Страница</span>
-          <select value={pageNumber} onChange={(e) => setPageNumber(Number(e.target.value))}>
-            {props.documentInfo.pages.map((p) => (
-              <option key={p.pageNumber} value={p.pageNumber}>
-                Страница {p.pageNumber} — {formatPageSizeMm(p.widthPt, p.heightPt)}
-              </option>
-            ))}
-          </select>
+          <SelectField
+            value={String(pageNumber)}
+            options={props.documentInfo.pages.map((p) => ({
+              value: String(p.pageNumber),
+              title: `Страница ${p.pageNumber} — ${formatPageSizeMm(p.widthPt, p.heightPt)}`,
+            }))}
+            onChange={(value) => setPageNumber(Number(value))}
+          />
         </label>
       )}
 
       <div className="field-row">
         <label className="field">
           <span>Разрешение подложки</span>
-          <select value={dpi} onChange={(e) => setDpi(Number(e.target.value))}>
-            {DPI_PRESETS.map((preset) => (
-              <option key={preset} value={preset}>
-                {preset} точек на дюйм
-              </option>
-            ))}
-          </select>
+          <SelectField
+            value={String(dpi)}
+            options={DPI_PRESETS.map((preset) => ({ value: String(preset), title: `${preset} точек на дюйм` }))}
+            onChange={(value) => setDpi(Number(value))}
+          />
         </label>
 
         <label className="field">
           <span>Поворот</span>
-          <select value={rotation} onChange={(e) => setRotation(Number(e.target.value) as QuarterTurn)}>
-            {ROTATIONS.map((angle) => (
-              <option key={angle} value={angle}>
-                {angle === 0 ? 'Как есть' : `${angle}°`}
-              </option>
-            ))}
-          </select>
+          <SelectField
+            value={String(rotation)}
+            options={ROTATIONS.map((angle) => ({
+              value: String(angle),
+              title: angle === 0 ? 'Как есть' : `${angle}°`,
+            }))}
+            onChange={(value) => setRotation(Number(value) as QuarterTurn)}
+          />
         </label>
       </div>
 

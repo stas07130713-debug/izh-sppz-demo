@@ -18,10 +18,10 @@ import type {
   RgbaImage,
 } from '@izh/contracts';
 import { err, ok } from '@izh/contracts';
-import { buildColorMask, buildInkMask, dilateMask, luminanceOf } from './color-mask.js';
+import { buildColorMask, buildInkMask, dilateMask, isColoredPixel, luminanceOf } from './color-mask.js';
+import { drawLine, eraseColoredInArea, rotateImage, scaleArea } from './image-area-ops.js';
 import {
   addComponentAt,
-  growIntoInk,
   measureComponentAt,
   type ComponentSummary,
 } from './components.js';
@@ -52,11 +52,23 @@ const NEAR_WHITE_LEVEL = 240;
 
 /** Шаг огрубления цвета при построении палитры. */
 const PALETTE_BUCKET = 16;
+const LINE_REPAIR_RADIUS_PX = 14;
+const MIN_LINE_REPAIR_RUN_PX = 4;
+const DARK_LINE_LEVEL = 90;
+const MONOCHROME_BACKGROUND_LEVEL = 190;
+const RESIDUAL_COLOR_THRESHOLD = 0.04;
 
 function paintWhite(data: Uint8ClampedArray, index: number): void {
   data[index] = WHITE;
   data[index + 1] = WHITE;
   data[index + 2] = WHITE;
+  data[index + 3] = 255;
+}
+
+function paintBlack(data: Uint8ClampedArray, index: number): void {
+  data[index] = 0;
+  data[index + 1] = 0;
+  data[index + 2] = 0;
   data[index + 3] = 255;
 }
 
@@ -134,32 +146,41 @@ export interface RemoveColoredOptions {
 }
 
 /**
- * Убрать всё цветное, оставив чёрные и серые линии здания.
+ * Убрать цветные служебные слои, не ломая планировку.
  *
  * Работает в три приёма, и каждый нужен:
  *   1. находим цветные точки по относительной насыщенности;
  *   2. расширяем маску, чтобы снять бледную кайму сглаживания вокруг них —
  *      иначе на месте стрелки остаётся её призрак;
- *   3. прорастаем от цветных точек в соседний рисунок на ограниченное число
- *      шагов — иначе от значка огнетушителя остаётся пустая чёрная рамка.
+ *   3. переводим результат в чёрно-белую архитектурную основу.
  *
- * Ограничение числа шагов принципиально: без него стрелка, коснувшаяся стены,
- * утащила бы за собой всю стену.
+ * После удаления дополнительно чинятся короткие разрывы тёмных линий. Это
+ * нужно для планов эвакуации: зелёная стрелка часто лежит прямо поверх стены,
+ * и простое «стереть цвет» превращает стену в пунктир. Если по обе стороны от
+ * удалённого участка видна продолжающаяся длинная тёмная линия, разрыв
+ * возвращается как чёрная линия. Маленькие рамки значков так не
+ * восстанавливаются: иначе автоматика сама возвращает удалённые пиктограммы.
  */
 export function removeColored(image: RgbaImage, options: RemoveColoredOptions): RgbaImage {
   const colorMask = buildColorMask(image.data, options.saturationThreshold);
-  const inkMask = buildInkMask(image.data);
   const guard = buildWallGuard(structuralInk(image, options.saturationThreshold), image.widthPx, image.heightPx);
 
   const removal = options.haloRadiusPx > 0
     ? dilateMask(colorMask, image.widthPx, image.heightPx, options.haloRadiusPx)
     : new Uint8Array(colorMask);
 
-  if (options.symbolGrowthPx > 0) {
-    growIntoInk(removal, inkMask, image.widthPx, image.heightPx, options.symbolGrowthPx, guard);
-  }
+  if (!maskHasAny(removal)) return copyOf(image);
 
-  return applyRemovalMask(image, removal, guard);
+  const cleaned = applyRemovalMask(image, removal, guard);
+  const repaired = repairLineGaps(image, cleaned, removal);
+  return architecturalMonochrome(repaired);
+}
+
+function maskHasAny(mask: Uint8Array): boolean {
+  for (const value of mask) {
+    if (value === 1) return true;
+  }
+  return false;
 }
 
 /** Убрать одну связную фигуру, на которую указал пользователь. */
@@ -211,6 +232,34 @@ export function inspectComponentAt(
   );
 }
 
+export interface RemoveSmallComponentsOptions {
+  readonly maxWidthPx: number;
+  readonly maxHeightPx: number;
+  readonly maxPixels: number;
+}
+
+/** Убрать мелкие текстоподобные компоненты без OCR и внешних библиотек. */
+export function removeSmallComponents(image: RgbaImage, options: RemoveSmallComponentsOptions): RgbaImage {
+  const ink = buildInkMask(image.data);
+  const guard = buildWallGuard(structuralInk(image, 0.15), image.widthPx, image.heightPx);
+  const visited = new Uint8Array(ink.length);
+  const removal = new Uint8Array(ink.length);
+
+  for (let start = 0; start < ink.length; start += 1) {
+    if (ink[start] !== 1 || visited[start] === 1 || guard[start] === 1) continue;
+    const component = collectComponent(ink, guard, visited, image.widthPx, image.heightPx, start);
+    if (
+      component.pixels.length <= options.maxPixels &&
+      component.maxX - component.minX + 1 <= options.maxWidthPx &&
+      component.maxY - component.minY + 1 <= options.maxHeightPx
+    ) {
+      for (const pixel of component.pixels) removal[pixel] = 1;
+    }
+  }
+
+  return applyRemovalMask(image, removal);
+}
+
 /**
  * Закрашивает белым точки, отмеченные к удалению.
  *
@@ -227,6 +276,106 @@ function applyRemovalMask(image: RgbaImage, removal: Uint8Array, guard?: Uint8Ar
     // утолщения там, где удаление подошло к стене вплотную.
     if (guard !== undefined && guard[pixel] === 1) continue;
     paintWhite(result.data, pixel * 4);
+  }
+
+  return result;
+}
+
+function repairLineGaps(original: RgbaImage, cleaned: RgbaImage, removal: Uint8Array): RgbaImage {
+  const result = copyOf(cleaned);
+
+  for (let pixel = 0; pixel < removal.length; pixel += 1) {
+    if (removal[pixel] !== 1) continue;
+    const x = pixel % original.widthPx;
+    const y = Math.floor(pixel / original.widthPx);
+    if (hasLineContinuationOnBothSides(original, removal, x, y, 1, 0) ||
+      hasLineContinuationOnBothSides(original, removal, x, y, 0, 1)) {
+      paintBlack(result.data, pixel * 4);
+    }
+  }
+
+  return result;
+}
+
+function hasLineContinuationOnBothSides(
+  image: RgbaImage,
+  removal: Uint8Array,
+  x: number,
+  y: number,
+  dx: number,
+  dy: number,
+): boolean {
+  return (
+    darkRunLengthNear(image, removal, x, y, dx, dy) >= MIN_LINE_REPAIR_RUN_PX &&
+    darkRunLengthNear(image, removal, x, y, -dx, -dy) >= MIN_LINE_REPAIR_RUN_PX
+  );
+}
+
+function darkRunLengthNear(
+  image: RgbaImage,
+  removal: Uint8Array,
+  x: number,
+  y: number,
+  dx: number,
+  dy: number,
+): number {
+  for (let step = 1; step <= LINE_REPAIR_RADIUS_PX; step += 1) {
+    const nx = x + dx * step;
+    const ny = y + dy * step;
+    if (nx < 0 || ny < 0 || nx >= image.widthPx || ny >= image.heightPx) return 0;
+    const pixel = ny * image.widthPx + nx;
+    if (removal[pixel] === 1) continue;
+    if (!isDarkLinePixel(image, pixel)) return 0;
+    return countDarkRun(image, nx, ny, dx, dy);
+  }
+  return 0;
+}
+
+function countDarkRun(
+  image: RgbaImage,
+  startX: number,
+  startY: number,
+  dx: number,
+  dy: number,
+): number {
+  let run = 0;
+  for (let step = 0; step < MIN_LINE_REPAIR_RUN_PX; step += 1) {
+    const nx = startX + dx * step;
+    const ny = startY + dy * step;
+    if (nx < 0 || ny < 0 || nx >= image.widthPx || ny >= image.heightPx) break;
+    const pixel = ny * image.widthPx + nx;
+    if (!isDarkLinePixel(image, pixel)) break;
+    run += 1;
+  }
+  return run;
+}
+
+function isDarkLinePixel(image: RgbaImage, pixel: number): boolean {
+  const index = pixel * 4;
+  return luminanceOf(
+    image.data[index] ?? 0,
+    image.data[index + 1] ?? 0,
+    image.data[index + 2] ?? 0,
+  ) <= DARK_LINE_LEVEL;
+}
+
+function architecturalMonochrome(image: RgbaImage): RgbaImage {
+  const result = copyOf(image);
+
+  for (let index = 0; index < result.data.length; index += 4) {
+    const r = result.data[index] ?? 0;
+    const g = result.data[index + 1] ?? 0;
+    const b = result.data[index + 2] ?? 0;
+    const luminance = luminanceOf(r, g, b);
+
+    if (
+      luminance >= MONOCHROME_BACKGROUND_LEVEL ||
+      isColoredPixel(r, g, b, RESIDUAL_COLOR_THRESHOLD)
+    ) {
+      paintWhite(result.data, index);
+    } else {
+      paintBlack(result.data, index);
+    }
   }
 
   return result;
@@ -359,11 +508,35 @@ export function scaleOperations(
         return { kind: 'crop', rect: scaleRect(operation.rect) };
       case 'erase-rect':
         return { kind: 'erase-rect', rect: scaleRect(operation.rect) };
+      case 'erase-polygon':
+        return {
+          kind: 'erase-polygon',
+          points: operation.points.map((point) => ({ x: point.x * factor, y: point.y * factor })),
+        };
       case 'remove-component':
         return {
           ...operation,
           seed: { x: operation.seed.x * factor, y: operation.seed.y * factor },
           maxRadiusPx: operation.maxRadiusPx * factor,
+        };
+      case 'draw-line':
+        // Линия принадлежит чертежу: и точки, и толщина считаются в его
+        // точках, поэтому уменьшаются вместе с ним.
+        return {
+          ...operation,
+          points: operation.points.map((point) => ({ x: point.x * factor, y: point.y * factor })),
+          widthPx: Math.max(1, operation.widthPx * factor),
+        };
+      case 'erase-colored-in-area':
+        // Область считается в точках чертежа, значит, пересчитывается.
+        // Допуск и насыщенность — про цвет, от размера не зависят.
+        return { ...operation, area: scaleArea(operation.area, factor) };
+      case 'remove-small-components':
+        return {
+          ...operation,
+          maxWidthPx: operation.maxWidthPx * factor,
+          maxHeightPx: operation.maxHeightPx * factor,
+          maxPixels: Math.max(1, Math.round(operation.maxPixels * factor * factor)),
         };
       default:
         // Действия с цветом от размера изображения не зависят: радиус каймы
@@ -372,6 +545,73 @@ export function scaleOperations(
         return operation;
     }
   });
+}
+
+/**
+ * Стирает область, обведённую от руки.
+ *
+ * Точка внутри многоугольника определяется лучом вправо: нечётное число
+ * пересечений — внутри. Обход строк изображения ограничен рамкой обводки:
+ * проверять весь чертёж ради пятна в углу незачем.
+ *
+ * Стирается в белый, а не в прозрачный: подложку печатают и показывают на
+ * белом листе, и дыра в изображении выглядела бы чёрной.
+ */
+export function erasePolygon(image: RgbaImage, points: readonly PixelPoint[]): RgbaImage {
+  if (points.length < 3) return copyOf(image);
+
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const left = Math.max(0, Math.floor(Math.min(...xs)));
+  const right = Math.min(image.widthPx - 1, Math.ceil(Math.max(...xs)));
+  const top = Math.max(0, Math.floor(Math.min(...ys)));
+  const bottom = Math.min(image.heightPx - 1, Math.ceil(Math.max(...ys)));
+
+  const result = copyOf(image);
+  for (let y = top; y <= bottom; y += 1) {
+    for (let x = left; x <= right; x += 1) {
+      // Проверяется середина точки: по краю обводки иначе получается
+      // рваная кромка — соседние точки попадают и не попадают через одну.
+      if (!inPolygon(x + 0.5, y + 0.5, points)) continue;
+      const at = (y * image.widthPx + x) * 4;
+      result.data[at] = 255;
+      result.data[at + 1] = 255;
+      result.data[at + 2] = 255;
+      result.data[at + 3] = 255;
+    }
+  }
+  return result;
+}
+
+function inPolygon(x: number, y: number, polygon: readonly PixelPoint[]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i, i += 1) {
+    const a = polygon[i];
+    const b = polygon[j];
+    if (a === undefined || b === undefined) continue;
+    if ((a.y > y) !== (b.y > y) && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/**
+ * Разбирает цвет вида «#rrggbb».
+ *
+ * Строкой, а не тремя числами: именно так цвет отдаёт поле выбора цвета в
+ * окне, и хранить его в том же виде проще, чем переводить туда и обратно.
+ * Непонятное — чёрное: линия на плане чёрная по умолчанию.
+ */
+function parseColor(value: string): RgbColor {
+  const match = /^#?([0-9a-f]{6})$/iu.exec(value.trim());
+  if (match === null) return { r: 0, g: 0, b: 0 };
+  const digits = match[1] as string;
+  return {
+    r: Number.parseInt(digits.slice(0, 2), 16),
+    g: Number.parseInt(digits.slice(2, 4), 16),
+    b: Number.parseInt(digits.slice(4, 6), 16),
+  };
 }
 
 /** Применяет действия очистки по порядку. */
@@ -395,6 +635,9 @@ export function applyCleanup(
         current = erased.value;
         break;
       }
+      case 'erase-polygon':
+        current = erasePolygon(current, operation.points);
+        break;
       case 'remove-color':
         current = removeColor(current, operation.color, operation.tolerance);
         break;
@@ -408,11 +651,88 @@ export function applyCleanup(
       case 'remove-component':
         current = removeComponentAt(current, operation.seed, operation.maxShare, operation.maxRadiusPx);
         break;
+      case 'remove-small-components':
+        current = removeSmallComponents(current, {
+          maxWidthPx: operation.maxWidthPx,
+          maxHeightPx: operation.maxHeightPx,
+          maxPixels: operation.maxPixels,
+        });
+        break;
       case 'keep-dark':
         current = keepDark(current, operation.luminanceThreshold);
+        break;
+      case 'rotate':
+        current = rotateImage(current, operation.quarterTurns);
+        break;
+      case 'draw-line':
+        current = drawLine(current, {
+          points: operation.points,
+          color: parseColor(operation.color),
+          widthPx: operation.widthPx,
+        });
+        break;
+      case 'erase-colored-in-area':
+        current = eraseColoredInArea(current, {
+          area: operation.area,
+          color: operation.color,
+          tolerance: operation.tolerance,
+          saturationThreshold: operation.saturationThreshold,
+          haloRadiusPx: operation.haloRadiusPx,
+        });
         break;
     }
   }
 
   return ok(current === image ? copyOf(image) : current);
+}
+
+interface CollectedComponent {
+  readonly pixels: readonly number[];
+  readonly minX: number;
+  readonly minY: number;
+  readonly maxX: number;
+  readonly maxY: number;
+}
+
+function collectComponent(
+  ink: Uint8Array,
+  guard: Uint8Array,
+  visited: Uint8Array,
+  widthPx: number,
+  heightPx: number,
+  start: number,
+): CollectedComponent {
+  const queue = [start];
+  const pixels: number[] = [];
+  visited[start] = 1;
+  let minX = start % widthPx;
+  let maxX = minX;
+  let minY = Math.floor(start / widthPx);
+  let maxY = minY;
+
+  for (let index = 0; index < queue.length; index += 1) {
+    const pixel = queue[index] ?? 0;
+    pixels.push(pixel);
+    const x = pixel % widthPx;
+    const y = Math.floor(pixel / widthPx);
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+
+    for (let dy = -1; dy <= 1; dy += 1) {
+      for (let dx = -1; dx <= 1; dx += 1) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= widthPx || ny >= heightPx) continue;
+        const next = ny * widthPx + nx;
+        if (visited[next] === 1 || ink[next] !== 1 || guard[next] === 1) continue;
+        visited[next] = 1;
+        queue.push(next);
+      }
+    }
+  }
+
+  return { pixels, minX, minY, maxX, maxY };
 }

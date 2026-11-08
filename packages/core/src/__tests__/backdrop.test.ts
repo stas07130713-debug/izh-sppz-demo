@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { BackdropDeps } from '../backdrop-deps.js';
-import { createBackdropFromImage, createBackdropFromPdf } from '../create-backdrop.js';
+import { createBackdropFromImage, createBackdropFromPdf, createBackdropFromSource } from '../create-backdrop.js';
 import { calibrateByDrawingScale, calibrateByTwoPoints } from '../calibrate-backdrop.js';
 import {
   FIXED_NOW,
@@ -18,6 +18,7 @@ import {
   fakeIdGenerator,
   pdfBytes,
   pngBytes,
+  textBytes,
   type FakeEngineOptions,
 } from './test-doubles.js';
 
@@ -58,6 +59,7 @@ describe('создание подложки из PDF', () => {
       pageNumber: 1,
       dpi: 150,
       extraRotationDeg: 90,
+      nodeId: 'этаж-1',
     });
 
     expect(result.ok).toBe(true);
@@ -65,6 +67,8 @@ describe('создание подложки из PDF', () => {
 
     expect(result.value).toEqual({
       id: 'id-1',
+      // Подложка принадлежит узлу дерева: генплан — зданию, поэтажный план — этажу.
+      nodeId: 'этаж-1',
       sourceHash: 'pdf-500',
       sourceFileName: 'План 1 этажа.pdf',
       sourceKind: 'pdf',
@@ -159,6 +163,38 @@ describe('создание подложки из картинки', () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.code).toBe('UNSUPPORTED_FORMAT');
+  });
+});
+
+describe('создание подложки из ходового источника', () => {
+  it('приводит SVG к рабочей PNG-подложке и сохраняет исходник отдельно', async () => {
+    const deps = makeDeps();
+    const result = await createBackdropFromSource(deps, {
+      sourceBytes: textBytes('<svg viewBox="0 0 10 10"></svg>'),
+      sourceFileName: 'план.svg',
+      nodeId: 'этаж-1',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.sourceKind).toBe('svg');
+    expect(result.value.sourceHash).toBe('svg-31');
+    expect(result.value.imageHash).toBe('png-1000');
+    expect(result.value.nodeId).toBe('этаж-1');
+  });
+
+  it('приводит DXF к рабочей PNG-подложке', async () => {
+    const deps = makeDeps();
+    const dxf = '0\nSECTION\n2\nENTITIES\n0\nLINE\n10\n0\n20\n0\n11\n10\n21\n10';
+    const result = await createBackdropFromSource(deps, {
+      sourceBytes: textBytes(dxf),
+      sourceFileName: 'план.dxf',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.sourceKind).toBe('dxf');
+    expect(result.value.imageHash).toBe('png-1000');
   });
 });
 

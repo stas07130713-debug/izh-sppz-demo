@@ -23,6 +23,33 @@ const PREVIEW_MAX_SIDE_PX = 1400;
 /** Сколько цветов показывать в палитре плана. */
 const PALETTE_SIZE = 12;
 
+/**
+ * Ждёт, пока картинка по ссылке готова к показу.
+ *
+ * Ожидание ограничено по времени и никогда не подвешивает показ. Это не
+ * перестраховка: `HTMLImageElement.decode()`, которым это делалось сначала,
+ * на скрытой вкладке не завершается вовсе — картинка загружена, размеры
+ * известны, а обещание висит. В программе это означало бы план, который не
+ * появляется никогда.
+ *
+ * Поэтому ждём обычной загрузки (`onload` срабатывает всегда) и всё равно
+ * отпускаем по истечении срока: показать чуть раньше лучше, чем не показать.
+ */
+async function imageReady(url: string): Promise<void> {
+  await new Promise<void>((resolve) => {
+    const image = new Image();
+    let done = false;
+    const finish = (): void => { if (!done) { done = true; resolve(); } };
+    image.onload = finish;
+    image.onerror = finish;
+    window.setTimeout(finish, IMAGE_WAIT_MS);
+    image.src = url;
+  });
+}
+
+/** Предел ожидания картинки. Больше секунды ждать нечего — покажем как есть. */
+const IMAGE_WAIT_MS = 1000;
+
 async function bytesToUrl(bytes: Uint8Array): Promise<string> {
   return URL.createObjectURL(new Blob([new Uint8Array(bytes) as BlobPart], { type: 'image/png' }));
 }
@@ -34,6 +61,14 @@ export interface WorkspaceImages {
   /** Ссылка на изображение, которое нужно показать сейчас. */
   readonly displayUrl: string | null;
   readonly loading: boolean;
+}
+
+export interface CleanupPreviewImage {
+  readonly url: string;
+  /** Размер в координатах полной подложки, а не уменьшенного предпросмотра. */
+  readonly widthPx: number;
+  readonly heightPx: number;
+  readonly image: RgbaImage;
 }
 
 /** Загружает исходное изображение подложки и строит палитру. */
@@ -83,15 +118,15 @@ export function useCleanupPreviewUrl(
   state: CleanupState,
   fullWidthPx: number,
   active: boolean,
-): string | null {
-  const [url, setUrl] = useState<string | null>(null);
+): CleanupPreviewImage | null {
+  const [value, setValue] = useState<CleanupPreviewImage | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     let created: string | null = null;
 
     if (preview === null || !active || fullWidthPx < 1) {
-      setUrl(null);
+      setValue(null);
       return;
     }
 
@@ -109,7 +144,12 @@ export function useCleanupPreviewUrl(
         URL.revokeObjectURL(created);
         return;
       }
-      setUrl(created);
+      setValue({
+        url: created,
+        widthPx: cleaned.value.widthPx / factor,
+        heightPx: cleaned.value.heightPx / factor,
+        image: cleaned.value,
+      });
     })();
 
     return () => {
@@ -118,23 +158,44 @@ export function useCleanupPreviewUrl(
     };
   }, [preview, state, fullWidthPx, active]);
 
-  return url;
+  return value;
 }
 
-/** Ссылка на сохранённое изображение подложки: очищенное, если очистка применена. */
+/**
+ * Ссылка на сохранённое изображение подложки: очищенное, если очистка
+ * применена.
+ *
+ * Ссылка выдаётся не сразу, как только прочитаны байты, а только после того,
+ * как картинка **разобрана браузером** и готова к показу.
+ *
+ * Заказчик: «при смене объекта подложка высвечивает на секунду другую
+ * (мигает)». Дело в том, как устроен показ картинки в браузере: когда у уже
+ * нарисованной картинки меняют ссылку, прежнее изображение остаётся на экране
+ * до тех пор, пока новое не разобрано. На чертеже в две тысячи точек это
+ * заметная доля секунды — и всё это время виден план прежнего этажа.
+ *
+ * `decode()` переносит ожидание сюда, до показа: к моменту, когда ссылка
+ * попадает в разметку, картинка уже готова и подменяется мгновенно. Не
+ * поддержан `decode` — работаем как прежде: показать чуть раньше лучше, чем
+ * не показать вовсе.
+ */
 export function useStoredImageUrl(
   backdrop: PlanBackdrop | null,
   cleanup: BackdropCleanup | null,
 ): string | null {
-  const [url, setUrl] = useState<string | null>(null);
   const hash = cleanup?.cleanedImageHash ?? backdrop?.imageHash ?? null;
+  const [loaded, setLoaded] = useState<{ readonly hash: string | null; readonly url: string | null }>({
+    hash: null, url: null,
+  });
 
   useEffect(() => {
     let cancelled = false;
     let created: string | null = null;
 
-    setUrl(null);
-    if (hash === null) return;
+    if (hash === null) {
+      setLoaded({ hash: null, url: null });
+      return;
+    }
 
     void (async () => {
       const bytes = await deps.fileStore.get(hash);
@@ -145,7 +206,16 @@ export function useStoredImageUrl(
         URL.revokeObjectURL(created);
         return;
       }
-      setUrl(created);
+
+      // Ждём, пока картинка загружена: иначе на экране ещё мгновение будет
+      // виден прежний чертёж.
+      await imageReady(created);
+      if (cancelled) {
+        URL.revokeObjectURL(created);
+        return;
+      }
+
+      setLoaded({ hash, url: created });
     })();
 
     return () => {
@@ -154,5 +224,10 @@ export function useStoredImageUrl(
     };
   }, [hash]);
 
-  return url;
+  /*
+   * `useEffect` начинается после отрисовки. Одного `setUrl(null)` в нём было
+   * недостаточно: новый узел успевал получить ссылку прежнего плана на один
+   * кадр. Совпадение хэша проверяется синхронно во время самой отрисовки.
+   */
+  return loaded.hash === hash ? loaded.url : null;
 }

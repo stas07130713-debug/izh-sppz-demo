@@ -1,52 +1,249 @@
-/* Оформление шага 1. Тёмная тема взята из согласованного макета главного экрана. */
+/*
+ * Оформление главного экрана.
+ *
+ * Утверждённая тема «Холодная сталь и глубокий петрол»: строгие нейтральные
+ * панели, петроловый акцент и отдельные спокойные цвета режимов и систем.
+ * Светлая и тёмная темы построены на одном наборе смысловых переменных.
+ *
+ * Компоновка — четыре поля из Дополнения 2 к ТЗ: шапка с режимами, слева
+ * структура объекта и сведения о ней, в центре рабочая область, справа
+ * добавление элементов или карточка выбранного.
+ *
+ * Для чертежей есть особенность: подложка нарисована чёрным по белому, поэтому
+ * в тёмной теме сам план остаётся на светлой основе — иначе линии сливаются.
+ */
 
-:root {
-  --bg: #0f172a;
-  --bg-panel: #1e293b;
-  --bg-elevated: #273449;
-  --border: #334155;
-  --text: #e2e8f0;
-  --text-muted: #94a3b8;
-  --accent: #2563eb;
-  --ok: #22c55e;
-  --warn: #f59e0b;
-  --danger: #ef4444;
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('./assets/fonts/IBMPlexSans-Regular.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('./assets/fonts/IBMPlexSans-SemiBold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+:root,
+[data-theme='dark'] {
+  --window-titlebar-height: 32px;
+  --bg: #080f13;
+  --bg-panel: #18242a;
+  --bg-elevated: #26383f;
+  --workspace-bg: #111c21;
+  --field-bg: #213239;
+  --border: #6b808a;
+  --text: #ffffff;
+  --text-muted: #d8e2e5;
+  --accent: #66c3cc;
+  --accent-hover: #82d6dd;
+  --header-bg: #0c161b;
+  --window-titlebar-bg: #0c161b;
+  --ok: #46e083;
+  --warn: #ffd24a;
+  --danger: #ff6460;
+  --unknown: #bac8ce;
+  --action-export: #61a9c7;
+  --action-export-hover: #78bdd8;
+  --action-export-text: #0d2028;
+  --action-import: #73bea0;
+  --action-import-hover: #8bd0b4;
+  --action-import-text: #8bd0b4;
+  --action-import-on-fill: #0b2119;
+  /* Поле, на котором лежит подложка плана: всегда светлое, см. выше. */
+  --plan-surface: #f7f8f8;
+  --shadow: 0 12px 28px rgba(0, 0, 0, .32);
+  /* Три блока систем имеют собственные идентификационные цвета. Они не
+     повторяют светофор статусов: сталь — снаружи, петрол — внутри,
+     приглушённый фиолетовый — пожарная автоматика. */
+  --group-outside: #4fb4dd;
+  --group-inside: #50caa8;
+  --group-automation: #b899e6;
+  /* Цвета вкладок рабочей области: у каждой свой, чтобы открытую было видно
+     краем глаза, не читая подписи. */
+  --tab-plan: #54a6ca;
+  --tab-journal: #6db485;
+  --tab-dashboard: #d59a50;
+}
+
+[data-theme='light'] {
+  /*
+   * Светлая тема не белая.
+   *
+   * Общая оболочка остаётся светло-стальной, рабочая область чуть светлее,
+   * панели почти белые, а поля ввода белые. Тёмный текст сохраняет уверенный
+   * контраст без ощущения ослепляющего полностью белого экрана.
+   */
+  --bg: #f8f7f3;
+  --bg-panel: #ffffff;
+  --bg-elevated: #f5f4f0;
+  --workspace-bg: #fdfcf9;
+  --field-bg: #ffffff;
+  --border: #d8dcd8;
+  --text: #162327;
+  --text-muted: #536266;
+  --accent: #08717e;
+  --accent-hover: #045d68;
+  --header-bg: #ffffff;
+  --window-titlebar-bg: #eef1ef;
+  --ok: #008c42;
+  --warn: #d98400;
+  --danger: #d72d2d;
+  --unknown: #66787e;
+  --action-export: #286f8e;
+  --action-export-hover: #1f5e79;
+  --action-export-text: #ffffff;
+  --action-import: #327a5b;
+  --action-import-hover: #28684b;
+  --action-import-text: #28684b;
+  --action-import-on-fill: #ffffff;
+  --plan-surface: #ffffff;
+  --shadow: 0 12px 28px rgba(49, 57, 54, .09);
+  --group-outside: #176f9c;
+  --group-inside: #087a63;
+  --group-automation: #7454a3;
+  --tab-plan: #267d9f;
+  --tab-journal: #3c8657;
+  --tab-dashboard: #a4661d;
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  padding-top: var(--window-titlebar-height);
+  font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
   background: var(--bg);
   color: var(--text);
 }
 
-.app { display: flex; flex-direction: column; height: 100vh; }
+/* Верхняя полоса окна принадлежит дизайн-системе, но стандартные кнопки
+   Windows поверх неё остаются нативными и предсказуемыми. */
+body::before {
+  content: ''; position: fixed; inset: 0 0 auto 0;
+  height: var(--window-titlebar-height); background: var(--window-titlebar-bg);
+  -webkit-app-region: drag; z-index: 10000;
+}
+
+.app { display: flex; flex-direction: column; height: calc(100vh - var(--window-titlebar-height)); }
 
 .app-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px; background: #0b1220; border-bottom: 1px solid var(--border);
+  padding: 10px 16px; background: var(--header-bg); color: var(--text);
 }
+.app-header .muted { color: var(--text-muted); }
+.header-actions { display: flex; align-items: center; gap: 10px; }
+.header-actions button {
+  background: color-mix(in srgb, var(--bg-panel) 55%, transparent); color: var(--text); border-color: var(--border);
+}
+.header-actions button:hover:not(:disabled) { background: var(--bg-elevated); border-color: var(--accent); }
+.header-actions .tab.active { background: var(--accent); border-color: var(--accent); }
+.logout-button svg { width: 20px; height: 20px; display: block; fill: currentColor; }
+.sign-in-remember {
+  align-self: flex-start; width: fit-content; max-width: 100%;
+  align-items: center; padding: 3px 2px; border: 0; background: transparent;
+  white-space: nowrap;
+}
+
+/*
+ * Меню, всплывшее из шапки, живёт по цветам панели, а не шапки.
+ *
+ * У шапки свой тёмный фон и светлый текст в обеих темах, и правила выше красят
+ * **любую** кнопку внутри неё. Меню колокольчика и меню пользователя
+ * отрисовываются там же — и на светлой теме выходили белым по белому: окно
+ * открывалось, а слов в нём видно не было. Заказчик: «в значке уведомления
+ * сейчас вообще не отображаются слова».
+ */
+.header-actions .context-menu { color: var(--text); }
+.header-actions .context-menu button {
+  color: inherit; background: transparent; border-color: transparent;
+}
+.header-actions .context-menu button:hover:not(:disabled) { background: var(--bg-elevated); }
+.header-actions .context-menu .muted { color: var(--text-muted); }
 
 .app-body { display: flex; flex: 1; min-height: 0; }
 
 .sidebar {
-  width: 320px; flex-shrink: 0; padding: 12px 14px;
+  width: 340px; flex-shrink: 0; padding: 12px 14px;
   background: var(--bg-panel); border-right: 1px solid var(--border);
   overflow-y: auto; display: flex; flex-direction: column;
+  /* Точка отсчёта для карточки узла: она выезжает в границах этого поля. */
+  position: relative;
 }
+
+/* Свёрнутое дерево — узкая полоса, а не пустота: план и журнал шире экрана, и
+   ради них дерево убирают, но вопрос «где я» остаётся. На полосе название
+   выбранного узла, поставленное вертикально, — единственный способ уместить
+   слово в сорок точек, не сокращая его до трёх букв. */
+.sidebar.folded {
+  width: 116px; padding: 8px 6px; align-items: stretch; gap: 8px;
+  flex-direction: column; overflow: hidden;
+}
+
+/* Ветвь в узком поле: подписи горизонтальные, просто мельче. Повёрнутый
+   текст читался иначе, чем дерево, и на него приходилось переучиваться.
+   Длинное название обрезается многоточием, полное показывает подсказка. */
+.sidebar-branch {
+  flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 1px;
+  overflow-y: auto; overflow-x: hidden; scrollbar-width: thin;
+}
+.branch-step {
+  flex: 0 0 auto; width: 100%; padding: 4px 5px; text-align: left;
+  font-size: 11px; line-height: 1.3; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+  background: none; border: none; border-radius: 5px; color: var(--text-muted);
+}
+.branch-step:hover { background: var(--bg-elevated); color: var(--text); }
+.branch-step.current { color: #fff; font-weight: 600; background: var(--accent); }
+.sidebar-branch-empty { font-size: 11px; color: var(--text-muted); padding: 4px 5px; }
+.sidebar-fold {
+  flex-shrink: 0; padding: 4px 8px; line-height: 1; font-size: 13px;
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text-muted); cursor: pointer;
+}
+.sidebar-fold:hover { color: var(--text); border-color: var(--accent); }
+
+/* Подсказка про правый щелчок стоит над деревом: кнопки «создать» больше нет,
+   и способ завести узел должен быть назван словами хотя бы раз. */
+.tree-hint { margin: 8px 0 6px; }
+
+/* Меню узла дерева */
+.context-menu-title {
+  padding: 4px 8px 6px; font-size: 12px; font-weight: 600;
+  color: var(--text-muted); border-bottom: 1px solid var(--border); margin-bottom: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px;
+}
+.context-menu-note { padding: 2px 8px 6px; margin: 0; max-width: 240px; }
+/* Форма добавления шире списка пунктов: в ней поля, а не строки-команды. */
+.tree-context-menu.wide { width: 300px; max-height: calc(100vh - 16px); overflow-y: auto; }
+.tree-context-menu.wide .add-child { padding: 4px 8px; }
+.tree-context-menu.wide h4 { margin: 2px 0 6px; }
 
 .inspector {
-  width: 340px; flex-shrink: 0; padding: 12px 14px;
+  width: 320px; flex-shrink: 0; padding: 12px 14px;
   background: var(--bg-panel); border-left: 1px solid var(--border); overflow-y: auto;
+  /*
+   * Панель прокручивается, поэтому она обязана быть точкой отсчёта для
+   * всего, что внутри неё позиционировано абсолютно. Иначе такой элемент
+   * привязывается к документу, встаёт по своему месту в потоке — глубоко
+   * внизу длинной карточки — и растягивает страницу, которая в этой
+   * программе прокручиваться не должна вовсе: раскладка построена на 100vh.
+   * У окон такая опора есть и так (подложка position: fixed), у панели её
+   * не было.
+   */
+  position: relative;
 }
 
-.workspace { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.workspace { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg); }
 
 h2 { font-size: 18px; margin: 0 0 8px; }
-h3 { font-size: 14px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+h3 { font-size: 13px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
 h4 { font-size: 13px; margin: 16px 0 6px; }
 
 .muted { color: var(--text-muted); }
@@ -58,33 +255,88 @@ h4 { font-size: 13px; margin: 16px 0 6px; }
 .path { margin-top: auto; padding-top: 12px; word-break: break-all; }
 
 button {
-  font: inherit; padding: 7px 12px; border-radius: 6px; cursor: pointer;
-  background: var(--bg-elevated); color: var(--text); border: 1px solid var(--border);
+  font: inherit; padding: 7px 12px; border-radius: 5px; cursor: pointer;
+  background: var(--bg-panel); color: var(--text); border: 1px solid var(--border);
 }
-button:hover:not(:disabled) { background: #33425c; }
-button:disabled { opacity: .45; cursor: not-allowed; }
+button:hover:not(:disabled) { background: var(--bg-elevated); }
+button:disabled { opacity: .5; cursor: not-allowed; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-button.primary:hover:not(:disabled) { background: #1d4ed8; }
+button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+button:active:not(:disabled) { transform: translateY(1px); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button.link { background: none; border: none; padding: 2px 6px; color: var(--text-muted); text-decoration: underline; }
+button.link:hover:not(:disabled) { background: none; color: var(--accent); }
 button.link.danger:hover { color: var(--danger); }
 
-input, select {
-  font: inherit; width: 100%; padding: 7px 9px; border-radius: 6px;
-  background: #0b1220; color: var(--text); border: 1px solid var(--border);
+input, select, textarea {
+  font: inherit; width: 100%; padding: 7px 9px; border-radius: 5px;
+  background: var(--field-bg); color: var(--text); border: 1px solid var(--border);
 }
+input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb, var(--accent) 48%, transparent); outline-offset: 1px; border-color: var(--accent); }
+input::placeholder { color: var(--text-muted); }
 
 .field { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
 .field > span { font-size: 12px; color: var(--text-muted); }
-.field-row { display: flex; gap: 12px; }
-.field-row .field { flex: 1; }
+.field-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.field-row .field { flex: 1 1 180px; min-width: 0; }
 
 .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
 
 .banner { padding: 10px 16px; cursor: pointer; }
-.banner.error { background: #450a0a; color: #fecaca; }
+.banner.error { background: color-mix(in srgb, var(--danger) 18%, var(--bg-panel)); color: var(--danger); }
+.banner.notice {
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg-panel));
+  color: var(--text);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 58%, var(--border));
+}
+/* Сообщение приложения — поверх модальных окон.
+   Отказ, случившийся по кнопке внутри окна, иначе остаётся за его подложкой:
+   человек нажимает «выпустить версию», не видит ничего и решает, что кнопка
+   сломана. Раз сообщение отвечает на действие, оно должно быть видно там, где
+   действие совершили. */
+/*
+ * Полоса уведомления встаёт под шапкой и целиком видна.
+ *
+ * Заказчик: «окно уведомления, выскакивающее вверху, не читается — не видно
+ * половину». Полоса стояла на двенадцати точках от верха окна, то есть прямо
+ * поверх шапки программы, и шапка съедала её верхнюю половину. Теперь она
+ * ниже шапки, а длинный текст переносится, а не обрезается.
+ */
+/*
+ * Полоса уведомления ничего не перехватывает и уходит сама.
+ *
+ * Заказчик: «опять в ряд окон не ставится курсор, чтобы заполнить или изменить
+ * данные».
+ *
+ * Вот отчего. Полоса висит поверх всего (иначе её съедала шапка) и стоит по
+ * середине верхней части экрана — ровно там, где у любого окна первые поля.
+ * Убрать её можно было только щелчком по ней самой, а до тех пор все щелчки в
+ * этой полосе доставались ей, а не полю под ней. Курсор в поле не вставал, и
+ * человек оставался с окном, которое «не принимает ввод».
+ *
+ * Стало заметно хуже после того, как настройки начали записываться сразу
+ * (С140): полоса «Сохранено» теперь выскакивает на каждое действие в
+ * настройках и остаётся висеть.
+ *
+ * Два правила разом:
+ *
+ *  — `pointer-events: none` — полоса не берёт щелчки вовсе; всё, что под ней,
+ *    нажимается как ни в чём не бывало;
+ *  — полоса уходит сама через несколько секунд (см. `useEffect` в главном
+ *    окне): сообщение — извещение, а не дело, которое нужно закрывать руками.
+ */
+.banner.app-message {
+  position: fixed; z-index: 120; top: 62px; left: 50%; transform: translateX(-50%);
+  max-width: min(760px, 92vw); border-radius: 8px; box-shadow: var(--shadow);
+  white-space: normal; overflow-wrap: anywhere;
+  pointer-events: none;
+}
 
-.wizard, .empty, .panel { padding: 20px 24px; max-width: 720px; }
-.panel { padding: 0; max-width: none; }
+.wizard, .empty, .panel {
+  padding: 20px 24px; max-width: 720px; background: var(--bg-panel);
+  border: 1px solid var(--border); border-radius: 8px; margin: 14px;
+}
+.panel { padding: 0; max-width: none; border: none; background: none; margin: 0; }
 
 .facts { display: grid; grid-template-columns: 190px 1fr; gap: 8px 16px; margin: 18px 0; }
 .facts dt { color: var(--text-muted); font-size: 13px; }
@@ -109,7 +361,7 @@ input, select {
   border-bottom: 1px solid var(--border); background: var(--bg-panel);
 }
 .viewer-area {
-  flex: 1; position: relative; overflow: hidden; background: #0b1220;
+  flex: 1; position: relative; overflow: hidden; background: var(--plan-surface);
   cursor: grab; touch-action: none;
 }
 .viewer-area.mode-pick-points, .viewer-area.mode-draw-rect { cursor: crosshair; }
@@ -130,13 +382,47 @@ section:first-of-type { border-top: none; }
 .checkbox { display: flex; align-items: center; gap: 8px; margin: 8px 0; cursor: pointer; }
 .checkbox input { width: auto; }
 
+/*
+ * Состав таблицы журнала: галочки в два столбца.
+ *
+ * Список читается как сама таблица, слева направо и сверху вниз, и колонок
+ * ровно столько, чтобы длинные названия граф карточки не переносились.
+ */
+/*
+ * Что именно предстоит — списком под строкой срока.
+ *
+ * С отступом и мельче: строка со сроком остаётся главной, а имена под ней —
+ * пояснением к ней, а не вторым перечнем.
+ */
+/*
+ * Подсветка обводки по кнопке «показать на плане».
+ *
+ * Заливка и граница уже включены разметкой; здесь — только пульс, чтобы
+ * помещение нашлось глазами среди соседних. Движение заметнее цвета: та же
+ * причина, по которой мигает значок из журнала (С142).
+ */
+@keyframes room-flash {
+  0%, 100% { stroke-width: 2; }
+  50% { stroke-width: 6; }
+}
+.room-outline.flash { animation: room-flash 0.7s ease-in-out 3; }
+
+.dash-upcoming-items { margin: 2px 0 6px 14px; }
+.dash-upcoming-items li { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+
+.journal-columns-list {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2px 16px; margin: 8px 0;
+}
+.journal-columns-list .checkbox { margin: 2px 0; }
+
 .palette { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .swatch {
   width: 52px; height: 34px; padding: 0; border-radius: 5px; border: 2px solid var(--border);
   font-size: 10px; color: #fff; text-shadow: 0 0 3px rgba(0,0,0,.9); display: flex;
   align-items: flex-end; justify-content: center;
 }
-.swatch.active { border-color: var(--danger); box-shadow: 0 0 0 2px rgba(239,68,68,.35); }
+.swatch.active { border-color: var(--danger); box-shadow: 0 0 0 2px rgba(220,38,38,.3); }
 
 .rect-list { list-style: none; margin: 8px 0 0; padding: 0; }
 .rect-list li { display: flex; align-items: center; justify-content: space-between; padding: 3px 0; }
@@ -145,19 +431,3304 @@ input[type='range'] { padding: 0; }
 
 /* Окно сверки распознавания */
 .viewer-area.compare { display: flex; align-items: flex-start; justify-content: center; overflow: auto; padding: 16px; }
-.compare-stack { position: relative; background: #ffffff; flex-shrink: 0; }
+.compare-stack { position: relative; background: var(--plan-surface); flex-shrink: 0; }
 .compare-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; user-select: none; }
 
 .inline-range { display: flex; align-items: center; gap: 6px; }
 .inline-range input { width: 120px; }
 
-.legend-bar { display: flex; gap: 16px; padding: 6px 12px; border-top: 1px solid var(--border); font-size: 12px; }
+.legend-bar { display: flex; gap: 16px; padding: 6px 12px; border-top: 1px solid var(--border); font-size: 12px; background: var(--bg-panel); }
 .legend-bar .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
 
 .facts-bar { border-top: 1px solid var(--border); background: var(--bg-panel); padding: 10px 16px; max-height: 210px; overflow-y: auto; }
 .facts-bar .facts { grid-template-columns: 190px 1fr; margin: 0; }
 
 .crash {
-  background: #0b1220; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px;
   padding: 12px; font-size: 12px; white-space: pre-wrap; max-height: 320px; overflow: auto;
 }
+
+/* Левое поле: дерево объекта и всё управление им */
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.panel-head h3 { margin: 0; }
+
+.tree-area { flex: 1; min-height: 120px; overflow-y: auto; margin: 8px 0; }
+.sidebar-props { border-top: 1px solid var(--border); padding-top: 10px; }
+
+.tree { list-style: none; margin: 0; padding: 0; }
+.tree .tree { margin-left: 10px; border-left: 1px solid var(--border); padding-left: 6px; }
+.tree-row {
+  display: flex; align-items: baseline; gap: 8px; width: 100%; text-align: left;
+  background: none; border: 1px solid transparent; padding: 4px 7px; margin: 1px 0;
+}
+.tree-row:hover:not(:disabled) { background: var(--bg-elevated); }
+.tree-row.selected { background: color-mix(in srgb, var(--accent) 22%, var(--bg-panel)); border-color: var(--accent); }
+.tree-name { font-weight: 600; overflow-wrap: anywhere; }
+.tree-icon { flex-shrink: 0; }
+
+.create-block {
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg-elevated);
+  padding: 10px 12px; margin-bottom: 10px;
+}
+.create-block h4 { margin-top: 0; }
+
+.node-card .caption {
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 10px; margin: 0 0 14px; font-size: 13px; overflow-wrap: anywhere;
+}
+.node-card .facts { grid-template-columns: 120px 1fr; margin: 10px 0 14px; }
+.move-node { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* Центр: подпись схемы и рабочая область. Режим выбирается в шапке. */
+.breadcrumb {
+  padding: 8px 14px; background: var(--bg-panel); border-bottom: 1px solid var(--border);
+  font-size: 13px; color: var(--text-muted); overflow-wrap: anywhere;
+}
+.center-body { flex: 1; min-height: 0; overflow: auto; }
+
+/* Правое поле: библиотека элементов */
+.library-list { list-style: none; margin: 0; padding: 0; }
+.library-list li {
+  display: flex; align-items: baseline; gap: 8px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--bg-elevated);
+  padding: 7px 9px; margin-bottom: 6px;
+}
+.library-code {
+  flex-shrink: 0; font-size: 11px; color: var(--text-muted);
+  border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; background: var(--bg);
+}
+.library-note {
+  border: 1px dashed var(--border); border-radius: 8px; padding: 12px;
+  text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 12px;
+}
+
+/* Раскрытие ветвей дерева знаком «+» / «−» на самой строке узла */
+.tree-row { padding: 0; gap: 0; align-items: stretch; }
+.tree-toggle {
+  flex: 0 0 auto; width: 22px; padding: 0; margin: 0; border: none; background: none;
+  color: var(--text-muted); font-size: 15px; line-height: 1; cursor: pointer;
+}
+.tree-toggle-blank { cursor: default; }
+.tree-toggle:hover:not(.tree-toggle-blank) { color: var(--accent); background: none; }
+.tree-label {
+  flex: 1; display: flex; align-items: baseline; gap: 8px; text-align: left;
+  background: none; border: none; padding: 4px 6px; min-width: 0;
+}
+.badge.muted { color: var(--text-muted); }
+
+/* Карточка характеристик здания */
+/* Черты сверху нет: форма идёт внутри раздела карточки, у него свой заголовок. */
+.profile-form { margin-top: 4px; }
+
+/* Поле для перетаскивания подложки */
+.dropzone {
+  margin: 14px; padding: 28px 24px; max-width: 720px;
+  background: var(--bg-panel); border: 2px dashed var(--border); border-radius: 10px;
+}
+.dropzone.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg-panel)); }
+
+/* Дашборд */
+.dashboard { padding: 18px 22px; overflow-y: auto; }
+.tiles { display: flex; flex-wrap: wrap; gap: 12px; margin: 14px 0 22px; }
+.tile {
+  min-width: 150px; padding: 12px 16px; background: var(--bg-panel);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.tile.warn-tile { border-color: var(--warn); }
+.tile.danger-tile { border-color: var(--danger); }
+.tile.danger-tile .tile-value { color: var(--danger); }
+.tile-value { font-size: 26px; font-weight: 600; }
+.tile-title { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+
+/* Плитка-кнопка — показатель дашборда, ведущий в отфильтрованный журнал (К4) */
+button.tile-clickable {
+  text-align: left; cursor: pointer; font: inherit;
+}
+button.tile-clickable:hover { border-color: var(--accent); background: var(--bg-elevated); }
+.plain-list { list-style: none; margin: 8px 0; padding: 0; }
+.plain-list li { padding: 4px 0; border-bottom: 1px solid var(--border); }
+.plain-list li:last-child { border-bottom: none; }
+
+/* Свёрнутая правая панель: обычная горизонтальная кнопка вместо вертикальной надписи. */
+.inspector.collapsed { width: 58px; padding: 8px 6px; overflow: hidden; }
+.panel-expand {
+  width: 46px; padding: 8px 4px; display: flex; flex-direction: column;
+  align-items: center; gap: 5px; font-size: 10px; border-color: var(--accent);
+}
+.panel-expand span:first-child { font-size: 24px; line-height: .8; }
+/* В правом поле шапка идёт в два ряда: сверху название, снизу кнопки. В одну
+   строку название сжималось до пары букв на строку — кнопки забирали место. */
+.inspector > .panel-head { flex-direction: column; align-items: stretch; gap: 6px; }
+.inspector > .panel-head .panel-head-actions { justify-content: flex-end; }
+.panel-head-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.panel-action-button { padding: 5px 8px; font-size: 12px; }
+.panel-icon-button { width: 30px; height: 30px; padding: 0; font-size: 22px; line-height: 1; }
+
+/* План с помещениями */
+/*
+ * План занимает отведённое ему поле целиком и не тянет страницу вниз.
+ *
+ * Нужно затем, чтобы чертёж вписывался в видимую область по высоте, а не
+ * только по ширине. Иначе при переходе между этажами план менял высоту вслед
+ * за пропорциями чертежа — заказчик: «подложки скачут при переключении».
+ */
+.plan-canvas {
+  position: relative; padding: 12px 14px;
+  height: 100%; min-height: 0; display: flex; flex-direction: column;
+}
+.plan-hint {
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-panel)); border: 1px solid var(--accent); border-radius: 6px;
+  padding: 8px 10px; margin-bottom: 10px; font-size: 13px;
+}
+/* План занимает всю ширину рабочей области и стоит по центру.
+   Раньше он был `inline-block` по своему пикселю: чертёж уже области
+   прижимался к левому краю, и свернуть боковое поле ради него не имело
+   смысла — место освобождалось, а план оставался прежним. Высота идёт за
+   шириной по пропорции листа, поэтому значки не разъезжаются с подложкой. */
+/* Увеличенный план прокручивается, а не обрезается. */
+/*
+ * План не сдвигается сам по себе.
+ *
+ * Заказчик: «значки на плане при нажатии мышкой куда-то дёргаются». Две
+ * причины, обе — в поведении браузера, а не в разметке.
+ *
+ * Первая: привязка прокрутки. Когда рядом меняется разметка — а щелчок по
+ * значку перерисовывает всю правую панель, — браузер сам подкручивает
+ * прокручиваемые области, чтобы «сохранить» видимое содержимое. На плане это
+ * выглядит как рывок значков. Привязка здесь не нужна: план не текст, который
+ * дочитывают, а чертёж, который держат на месте.
+ *
+ * Вторая — установка ввода на нажатую кнопку — снимается в самом значке
+ * (`focus({ preventScroll: true })`).
+ */
+.plan-scroll {
+  overflow: auto; max-width: 100%; overflow-anchor: none;
+  flex: 1 1 auto; min-height: 0;
+  /* Размер чертежа точно рассчитывается по этому окну. */
+  display: block;
+}
+/*
+ * Ничего на плане не выделяется как текст.
+ *
+ * Заказчик: «значки на плане при нажатии мышкой куда-то дёргаются… бывает, что
+ * глючат и дрожат». Причина: нажатие с ведением мыши по чертежу начинало
+ * обычное выделение текста. Браузер при этом подсвечивает подписи, тянет
+ * выделение за курсором и **сам подкручивает** прокручиваемую область к его
+ * краю — план дёргается и дрожит, а на закреплённом этаже, где значок не
+ * таскается вовсе, только это и происходит.
+ *
+ * На чертеже выделять нечего: подписи значков читают, а не копируют.
+ */
+.plan-scroll, .plan-stack, .object-marker, .marker-label {
+  user-select: none; -webkit-user-select: none;
+}
+.plan-stack {
+  position: relative; display: block; width: 100%; margin: 0 auto;
+  /*
+   * Пропорции чертежа задаются разметкой, а высота ограничена полем: чертёж
+   * вписывается и по ширине, и по высоте, и при переходе на этаж с другими
+   * пропорциями поле остаётся тем же.
+   */
+  flex: 0 0 auto;
+  background: var(--plan-surface); border: 1px solid var(--border);
+  /* Множитель масштаба: по нему растут значки и подписи. Подложка тянется
+     сама — она занимает всю ширину плана. */
+  --plan-zoom: 1;
+}
+/* Подложка тянется за планом: масштаб меняет ширину плана, а всё внутри
+   него — картинка и значки — задано долями от неё и растёт вместе. */
+.plan-stack > img { width: 100%; display: block; }
+/* Название узла над чертежом: своей строкой, по середине, покрупнее.
+   Поверх чертежа подпись всегда кому-то мешала — там штамп, там вход. */
+.plan-title {
+  max-width: 100%; margin: 0 auto;
+  text-align: center; font-size: 15px; font-weight: 800; color: var(--text-main);
+  padding: 2px 12px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Над журналом и дашбордом кнопок масштаба справа нет — поле не нужно. */
+.center-caption { max-width: 100%; padding-top: 8px; }
+/* Пояснение к устройству вкладки: под названием, помельче и не жирным. */
+.center-caption-note { text-align: center; padding: 0 12px 8px; }
+
+/* Та же подпись в редакторе подложки: там чертёж двигают и приближают,
+   и держать её на самом изображении уместно — она часть просмотра. */
+.plan-caption-overlay {
+  position: absolute;
+  z-index: 3; max-width: calc(100% - 24px); padding: 6px 12px; border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-panel) 88%, transparent);
+  border: 1px solid var(--border); color: var(--text-main); font-size: 13px; font-weight: 700;
+  box-shadow: var(--shadow); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  user-select: none;
+}
+
+/* Масштаб плана — те же кнопки, что у журнала. */
+/* Масштаб — маленьким блоком в углу над планом. Полоса во всю ширину ради
+   трёх кнопок оттягивала взгляд от чертежа. */
+/*
+ * Строка над чертежом: название по середине, кнопки приближения справа.
+ *
+ * Три доли, а не «кнопки поверх названия»: при широкой величине («230 %»)
+ * уголок наползал на название узла.
+ */
+.plan-head {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 8px; flex: 0 0 auto;
+}
+.plan-head > .plan-zoom-corner { justify-self: end; }
+.plan-zoom-corner {
+  z-index: 4;
+  display: inline-flex; align-items: center; gap: 2px; padding: 2px;
+  background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
+  border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow);
+}
+.plan-zoom-corner button {
+  padding: 2px 8px; min-width: 26px; background: none; border: none;
+  border-radius: 5px; font-size: 13px; color: var(--text);
+}
+.plan-zoom-corner button:hover { background: var(--bg-elevated); }
+.plan-zoom-corner .plan-zoom-value { min-width: 48px; font-size: 12px; color: var(--text-muted); }
+
+.plan-zoom { display: inline-flex; align-items: center; gap: 4px; }
+.plan-zoom button { padding: 2px 8px; min-width: 28px; }
+.plan-zoom .plan-zoom-value { min-width: 46px; text-align: center; font-size: 12px; }
+.viewer-caption { transform: translateX(-50%) scale(calc(1 / var(--viewer-zoom, 1))); transform-origin: top center; }
+.plan-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.plan-overlay.drawing { cursor: crosshair; }
+.outline-point-hit { cursor: move; }
+.room-plan-tooltip {
+  position: fixed; z-index: 120; pointer-events: none;
+  display: flex; flex-direction: column; gap: 2px;
+  max-width: 240px; padding: 7px 9px;
+  border: 1px solid var(--accent); border-radius: 6px;
+  background: color-mix(in srgb, var(--bg-panel) 96%, transparent);
+  color: var(--text); box-shadow: var(--shadow); font-size: 12px;
+}
+
+/* Помещения этажа */
+.rooms-panel { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 8px; }
+.rooms-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.rooms-list li { border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; margin-bottom: 6px; }
+.room-head { display: flex; align-items: center; gap: 7px; }
+.room-mark { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+/*
+ * Действия помещения переносятся по строкам.
+ *
+ * Их четыре — «изменить обводку», «показать на плане», «снять обводку»,
+ * «удалить», — а карточка узла стоит в узкой колонке. Без переноса последняя
+ * кнопка вылезала за рамку окна: заказчик увидел «удалить» за краем.
+ */
+.room-actions { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 4px; }
+.room-actions button { white-space: nowrap; }
+
+/* Несколько значений в одном поле */
+.multi-select { display: flex; flex-direction: column; gap: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 12px;
+  background: color-mix(in srgb, var(--accent) 20%, var(--bg-panel)); border: 1px solid var(--accent); border-radius: 12px; padding: 1px 4px 1px 9px;
+}
+.chip-remove { background: none; border: none; padding: 0 3px; color: var(--text-muted); cursor: pointer; }
+.chip-remove:hover { color: var(--danger); background: none; }
+
+/* Объекты СППЗ на плане */
+.object-marker {
+  position: absolute; transform: translate(-50%, -50%);
+  width: calc(28px * var(--plan-zoom, 1)); min-width: calc(28px * var(--plan-zoom, 1));
+  height: calc(28px * var(--plan-zoom, 1)); padding: 0; border-radius: 4px;
+  border: none; color: #fff; font-size: calc(11px * var(--plan-zoom, 1)); font-weight: 700;
+  display: flex; align-items: center; justify-content: center; cursor: default;
+  box-shadow: 0 1px 3px rgba(0,0,0,.35);
+}
+.object-marker.dragging { cursor: move; z-index: 6; }
+.object-marker:active:not(:disabled) { transform: translate(-50%, -50%); }
+.object-marker.selected { outline: 3px solid #111827; outline-offset: 1px; }
+.plan-loading {
+  flex: 1 1 auto; min-height: 0; display: grid; place-items: center;
+  color: var(--text-muted); background: var(--plan-surface);
+}
+/* Кнопка поднята над слоем разметки: слой лежит поверх всей области плана и
+   перехватывал нажатие — кнопка выглядела неработающей. */
+.empty-plan-surface button { position: relative; z-index: 4; }
+.empty-plan-surface { width: min(100%, 1600px); min-height: 440px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; background: repeating-linear-gradient(45deg, #edf2f7, #edf2f7 14px, #e2e8f0 14px, #e2e8f0 28px); }
+/* Учётный номер под значком — красным и жирным, в цвет значка: на чертеже
+   чёрная подпись теряется среди линий, а её читают чаще самого значка.
+   Белая обводка вокруг букв: план бывает и тёмным, и пёстрым. */
+/*
+ * Подпись под значком: номер сверху, марка под ним в скобках.
+ *
+ * Заказчик: «подписи значков огнетушителей нужно сделать мельче, чтобы не
+ * перекрывало другие объекты и надписи, и в два ряда — во втором ряду вид
+ * огнетушителя в скобках».
+ *
+ * Мелко и в две строки — это не только про вкус. Подпись в одну строку была
+ * шириной со сто семьдесят точек при значке в двадцать восемь: на плотном
+ * плане она ложилась на соседние значки и на надписи самого чертежа. Две
+ * короткие строки занимают вдвое меньше по ширине, а по высоте — место под
+ * значком, где чертежа обычно нет.
+ */
+.marker-label {
+  position: absolute; top: calc(30px * var(--plan-zoom, 1)); left: 50%;
+  transform: translateX(-50%); pointer-events: none;
+  display: flex; flex-direction: column; align-items: center;
+  min-width: calc(46px * var(--plan-zoom, 1)); max-width: calc(96px * var(--plan-zoom, 1));
+  font-size: calc(9px * var(--plan-zoom, 1)); line-height: 1.05;
+  color: var(--danger); font-weight: 700; text-align: center;
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;
+}
+.marker-label > span {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Марка — второй строкой и ещё тише: она уточняет номер, а не спорит с ним. */
+.marker-kind { font-weight: 600; font-size: calc(8px * var(--plan-zoom, 1)); opacity: .9; }
+.checklist-attachments { flex: 1 1 100%; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.attachment-list { width: 100%; margin: 0; padding-left: 18px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.request-modal { width: min(860px, calc(100vw - 40px)); max-height: calc(100vh - 40px); overflow: auto; }
+.request-preview { border: 1px solid var(--border); border-radius: 8px; padding: 10px; max-height: 260px; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+.system-summary { padding-bottom: 16px; }
+.summary-group { border-top: 1px solid var(--border); padding: 8px 0; }
+.summary-group-title { width: 100%; display: flex; justify-content: space-between; border: 0; background: transparent; color: var(--text); font-weight: 700; padding: 5px 2px; text-align: left; }
+.summary-card-grid { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+.summary-type-card { position: relative; min-height: 42px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-elevated); color: var(--text); }
+.summary-type-open { width: 100%; min-height: 42px; display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 7px; padding: 5px 8px; text-align: left; border: 0; background: transparent; color: inherit; }
+.summary-type-card:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--bg-elevated)); }
+.summary-type-visible { position: absolute; z-index: 2; top: 5px; right: 5px; }
+.summary-type-card strong { justify-self: end; font-size: 15px; color: var(--accent); margin-right: 22px; }
+.summary-type-card small { display: none; }
+.summary-type-name { font-size: 12px; line-height: 1.2; }
+/*
+ * Показ строки в журнале — сплошной заливкой во всю строку.
+ *
+ * Заказчик: «пусть мигает единой заливкой, но без разделения чёрточками, как
+ * сейчас». Чёрточки — это границы ячеек: заливка ставилась каждой ячейке
+ * отдельно, и разделители резали её на куски. На время показа границы внутри
+ * строки убираются, и она читается как одна полоса.
+ */
+.journal-table tbody tr.journal-focus-row td {
+  animation: journal-focus-pulse 1.05s ease-in-out 3;
+  border-right-color: transparent;
+}
+@keyframes journal-focus-pulse {
+  0%, 100% { background: var(--bg-panel); }
+  50% { background: color-mix(in srgb, var(--accent) 34%, var(--bg-panel)); }
+}
+.object-marker:hover:not(:disabled) { filter: brightness(1.1); }
+/* Показ значка по команде «показать на плане»: короткая вспышка ободком.
+   Класс снимается и возвращается кодом — так анимация играет и во второй раз
+   подряд, а сама кнопка при этом остаётся прежней и не рвёт перетаскивание. */
+/*
+ * Показ значка на плане: заметная вспышка, а не тонкий ободок.
+ *
+ * Заказчик: «при нажатии „показать элемент на плане“ плохо видно, как он
+ * мигает». Прежняя вспышка была тенью вокруг значка — на пёстром чертеже среди
+ * двух десятков красных значков её и правда не различить. Теперь мигает сам
+ * значок: заливка и заметное кольцо вокруг.
+ */
+/*
+ * Показ значка по команде «показать на плане».
+ *
+ * Заказчик: «пусть мигает не ярким жёлтым, а подходящим по дизайну, но
+ * бросающимся в глаза цветом».
+ *
+ * Жёлтый и правда был чужим: в программе он занят состоянием «требует
+ * внимания», и вспышка им читалась как «с этим элементом что-то не так».
+ * Взят цвет самой программы — тот же, каким подсвечено выбранное и активные
+ * вкладки. Заметность даётся не чужим цветом, а движением: кольцо расходится
+ * от значка, а сам значок в этот миг подрастает.
+ *
+ * Кольцо расходится, а не просто появляется: глаз ловит движение куда лучше,
+ * чем смену цвета, — и находит значок среди двух десятков соседей.
+ */
+.object-marker.flash { animation: marker-flash .75s ease-out 4; z-index: 5; }
+@keyframes marker-flash {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 92%, transparent),
+                0 1px 3px rgba(0,0,0,.35);
+    transform: translate(-50%, -50%) scale(1);
+  }
+  35% {
+    box-shadow: 0 0 0 9px color-mix(in srgb, var(--accent) 78%, transparent),
+                0 0 16px 6px color-mix(in srgb, var(--accent) 55%, transparent);
+    transform: translate(-50%, -50%) scale(1.35);
+  }
+  100% {
+    box-shadow: 0 0 0 22px color-mix(in srgb, var(--accent) 0%, transparent),
+                0 1px 3px rgba(0,0,0,.35);
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Точка состояния в углу значка — не рамка вокруг всего значка, чтобы не
+   занимать место на плотном плане (по образцу заказчика). */
+.marker-status-dot {
+  position: absolute; top: -3px; right: -3px;
+  width: calc(9px * var(--plan-zoom, 1)); height: calc(9px * var(--plan-zoom, 1));
+  border-radius: 50%; border: 1.5px solid var(--bg-panel);
+}
+.marker-status-dot.marker-ok { background: var(--ok); }
+.marker-status-dot.marker-warn { background: var(--warn); }
+.marker-status-dot.marker-danger { background: var(--danger); }
+.marker-status-dot.marker-unknown { background: var(--text-muted); }
+/* Вторая точка у прибора — состояние всей его системы. Стоит под первой и
+   чуть крупнее с ободком: прибор исправен, а система может быть нет, и по
+   одной точке этого не увидеть. */
+.marker-status-dot.marker-system {
+  top: 9px; right: -4px; width: 11px; height: 11px; border-width: 2px;
+}
+
+.element-mark {
+  flex-shrink: 0; min-width: 30px; padding: 1px 5px; border-radius: 4px;
+  color: #fff; font-size: 11px; font-weight: 700; text-align: center;
+}
+.element-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; flex: 0 0 28px;
+}
+.element-icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.element-icon-plan { width: 26px; height: 26px; flex-basis: 26px; pointer-events: none; }
+.element-icon-large { width: 34px; height: 34px; flex-basis: 34px; }
+.library-list li[draggable='true'] { cursor: grab; }
+.library-list li { align-items: center; }
+.library-list li[draggable='true']:hover { border-color: var(--accent); }
+
+.object-type { display: flex; align-items: center; gap: 9px; margin: 4px 0 12px; }
+
+/* Свёрнутая карточка узла в левом поле */
+/*
+ * Полоса, которой карточку узла открывают и убирают.
+ *
+ * Заказчик: «сама кнопка открыть-скрыть карточку узла была плохо сделана —
+ * нужно, чтобы она была контрастной и нормально выглядела». Прежде это была
+ * серая надпись мелким шрифтом на сером же поле: её не было видно, и никто не
+ * догадывался, что карточка вообще открывается.
+ *
+ * Теперь полоса заметная — на цвете действия, во всю ширину поля и по центру.
+ * Открывающая и закрывающая устроены одинаково и стоят на одном месте, у
+ * нижнего края: движение читается как выдвижной ящик.
+ */
+.card-toggle {
+  width: 100%; text-align: center; flex: 0 0 auto;
+  background: var(--accent); border: 1px solid var(--accent);
+  border-radius: 7px; padding: 9px 12px;
+  font-size: 13px; font-weight: 600; color: #fff;
+  letter-spacing: .01em;
+}
+/*
+ * Наведение не съедает цвет кнопки.
+ *
+ * Заказчик: «при наведении на кнопку „карточка узла“ она становится белой и
+ * нечитаемой». Причина в весе правил: общее `button:hover` перекрашивало фон в
+ * светлый, а собственный белый текст кнопки оставался — белым по белому. Своё
+ * правило теперь задаёт и фон, и рамку, и вес у него не ниже общего.
+ */
+.card-toggle:hover:not(:disabled) {
+  background: var(--accent-hover); border-color: var(--accent-hover); color: #fff;
+}
+.card-toggle.open { margin-top: 10px; }
+.sidebar-props { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 8px; }
+
+/* Строка объектов, ожидающих размещения на плане */
+.pending-strip {
+  border-top: 2px solid var(--warn); background: color-mix(in srgb, var(--warn) 14%, var(--bg-panel));
+  padding: 8px 14px; margin: 0;
+}
+.pending-title { font-size: 12px; font-weight: 600; color: var(--warn); margin-bottom: 6px; }
+.pending-list { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; }
+.pending-item {
+  display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 3px;
+  background: var(--bg-panel); border: 1px solid var(--warn); border-radius: 14px; cursor: grab;
+}
+.pending-item.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+/* Журнал: единица отображения — оборудование, колонки — мероприятия */
+.journal { padding: 12px 14px; height: 100%; display: flex; flex-direction: column; }
+
+/*
+ * Полоса прокрутки вбок всегда у нижнего края окна.
+ *
+ * Заказчик: «сделай, чтобы ползунок перемещения вправо и влево был всегда по
+ * нижнему краю страницы; сейчас в длинном журнале надо спуститься до самого
+ * низа, чтобы прокрутить вбок».
+ *
+ * Причина была в одной недостающей строке. У колонки во flex-раскладке
+ * наименьшая высота по умолчанию равна высоте содержимого: таблица на двести
+ * строк растягивала свою рамку во всю длину, и полоса прокрутки, стоящая по
+ * низу этой рамки, уезжала далеко за экран. `min-height: 0` разрешает рамке
+ * стать ниже содержимого — тогда прокручивается она сама, и обе её полосы
+ * всегда на виду.
+ */
+.journal-table-wrap {
+  overflow: visible; flex: 0 0 auto; min-height: 0;
+  width: max-content; min-width: 100%;
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.journal-table { border-collapse: collapse; width: max-content; min-width: 100%; background: var(--bg-panel); font-size: 13px; }
+.journal-table th, .journal-table td {
+  border-bottom: 1px solid var(--border); border-right: 1px solid var(--border);
+  padding: 6px 10px; text-align: left; white-space: nowrap;
+}
+.journal-table th { background: var(--bg-elevated); position: sticky; top: 0; z-index: 1; }
+.journal-table tbody tr:hover { background: var(--bg-elevated); }
+.journal-cell { padding: 3px 6px !important; }
+
+.status-cell {
+  display: inline-flex; align-items: center; gap: 6px; width: 100%;
+  border: 1px solid transparent; border-radius: 5px; padding: 4px 8px; background: none;
+}
+.status-cell:hover:not(:disabled) { background: var(--bg-elevated); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+/* Подпись рядом с точкой берёт оттенок состояния, но приглушённый до
+   читаемого: чистый красный текст на тёмном фоне режет глаз, а на светлом
+   сливается с рамками. Смешивание с основным цветом текста держит контраст
+   в обеих темах. */
+.status-ok .status-dot { background: var(--ok); }
+.status-ok { color: color-mix(in srgb, var(--ok) 55%, var(--text)); }
+.status-warn .status-dot { background: var(--warn); }
+.status-warn { color: color-mix(in srgb, var(--warn) 55%, var(--text)); }
+.status-danger .status-dot { background: var(--danger); }
+.status-danger { color: color-mix(in srgb, var(--danger) 60%, var(--text)); }
+.status-unknown .status-dot { background: var(--text-muted); }
+.status-unknown { color: var(--text-muted); }
+
+/* Модальное окно мероприятия: чек-лист и история */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(15,23,42,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.modal {
+  background: var(--bg-panel); border-radius: 10px; width: 720px; max-width: 92vw;
+  max-height: 88vh; overflow-y: auto; padding: 16px 20px; box-shadow: var(--shadow);
+}
+.modal-body { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; margin-top: 8px; }
+.modal-body section { border: none; padding: 0; margin: 0; }
+.history-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.history-list li {
+  border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; margin-bottom: 6px;
+}
+.history-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* Окно группового создания */
+.numbering-preview { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0 4px; }
+.placement-modes { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+
+/* Мастер переноса журнала */
+.wizard-modal { width: 900px; }
+.wizard-steps { display: flex; gap: 14px; margin: 4px 0 14px; flex-wrap: wrap; }
+.wizard-step { font-size: 12px; color: var(--text-muted); }
+.wizard-step.active { color: var(--accent); font-weight: 600; }
+.mapping-table select { min-width: 220px; }
+.mapping-table td { vertical-align: top; white-space: normal; }
+
+/* ============================================================
+   Дополнение 2: шапка, режимы, дашборд, группы журнала, карточка
+   ============================================================ */
+
+/* Шапка: логотип слева, режимы посередине, значки справа (часть П9) */
+.brand { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
+.brand-mark {
+  font-weight: 700; letter-spacing: .08em; font-size: 15px;
+  padding: 3px 8px; border-radius: 6px; background: var(--accent); color: #fff;
+}
+.brand-sub { font-size: 12px; }
+
+/* Вкладки рабочей области: план, журнал, дашборд.
+   Устроены как в браузере: корешок сверху, под ним поле с его содержимым.
+   Открытая вкладка сливается с полем — у неё нет нижней границы, и цветная
+   полоса сверху показывает, какая именно открыта. */
+.mode-tabs {
+  flex: 0 0 auto;
+  display: flex; align-items: flex-end; gap: 3px;
+  padding: 8px 14px 0; background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.mode-tab {
+  /* Вкладки делят строку поровну и занимают её целиком: ряд коротких
+     корешков посреди пустой полосы выглядел незаконченным. Равная доля заодно
+     держит их на месте — подпись на ширину больше не влияет, и при переходе по
+     дереву вкладки не съезжают. */
+  flex: 1 1 0; min-width: 0; position: relative;
+  padding: 9px 10px 8px; margin-bottom: -1px;
+  font-size: 13px; text-align: center; cursor: pointer;
+  color: var(--text-muted); background: var(--bg-elevated);
+  border: 1px solid var(--border); border-bottom-color: var(--border);
+  border-radius: 9px 9px 0 0;
+}
+/* Цветная полоса сверху — тонкая у закрытой вкладки, заметная у открытой. */
+.mode-tab::before {
+  content: ''; position: absolute; left: 9px; right: 9px; top: 0; height: 2px;
+  border-radius: 0 0 2px 2px; background: var(--tab-color); opacity: .45;
+}
+.mode-tab-plan { --tab-color: var(--tab-plan); }
+.mode-tab-journal { --tab-color: var(--tab-journal); }
+.mode-tab-dashboard { --tab-color: var(--tab-dashboard); }
+
+.mode-tab:hover:not(:disabled) { color: var(--text); background: var(--bg-panel); }
+.mode-tab:disabled { opacity: .4; cursor: not-allowed; }
+
+.mode-tab.active {
+  color: var(--text); font-weight: 600;
+  background: var(--bg-panel); border-bottom-color: var(--bg-panel);
+  padding-top: 11px;
+}
+.mode-tab.active::before { height: 3px; opacity: 1; left: 0; right: 0; border-radius: 9px 9px 0 0; }
+
+/* Поле вкладки: то, что под корешком. Цветная тень сверху продолжает полосу
+   открытой вкладки на всё поле, так что раздел виден и внизу экрана. */
+.mode-panel {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  background: var(--bg-panel);
+}
+.mode-panel-plan { box-shadow: inset 0 2px 0 -1px var(--tab-plan); }
+.mode-panel-journal { box-shadow: inset 0 2px 0 -1px var(--tab-journal); }
+.mode-panel-dashboard { box-shadow: inset 0 2px 0 -1px var(--tab-dashboard); }
+
+/* Подпись схемы и кнопки открытой вкладки — одной строкой над содержимым. */
+/* Шапка вкладки в два ряда: кнопки сверху, название под ними по центру.
+   В одну строку они не помещались — длинное название сжимало кнопки, а
+   кнопки обрезали название до одного слова. */
+.mode-panel-head {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; align-items: stretch; gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+.mode-panel-head .breadcrumb {
+  min-width: 0; border-bottom: none; text-align: center;
+  padding: 2px 12px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Кнопки вкладки «План» разведены по краям: слева — то, что план
+   показывает, справа — то, что в нём меняют. */
+.mode-panel-head .mode-panel-actions {
+  flex-wrap: wrap; justify-content: space-between; padding: 6px 12px;
+}
+.plan-actions-side { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mode-panel-actions {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 6px 14px 6px 0;
+}
+.mode-panel-actions button { padding: 6px 12px; font-size: 13px; white-space: nowrap; }
+
+.header-actions .icon-button {
+  padding: 6px 9px; line-height: 1; font-size: 15px;
+}
+
+/* Правое поле дашборда: системы уровня с галочками */
+/* Галочка раздела стоит над его списком и управляет только им. */
+.systems-group-head {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 4px 6px 4px 0; font-size: 12px; font-weight: 600; color: var(--text);
+}
+.systems-group-head input { width: auto; margin: 0; flex-shrink: 0; }
+.systems-group-title { flex: 1 1 auto; min-width: 0; }
+.systems-group-count { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.systems-total { margin: 0 0 10px; }
+
+/* Раздел систем помечен цветом слева — тем же, что у блоков журнала. */
+.systems-group {
+  border: none; border-left: 3px solid var(--border); padding: 0 0 0 8px; margin: 0 0 12px;
+}
+.systems-group.group-outside { border-left-color: var(--group-outside); }
+.systems-group.group-inside { border-left-color: var(--group-inside); }
+.systems-group.group-automation { border-left-color: var(--group-automation); }
+.systems-group h4 {
+  margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--text-muted);
+}
+.systems-list { list-style: none; margin: 0; padding: 0; }
+.system-row {
+  display: flex; align-items: center; gap: 8px; padding: 4px 6px;
+  border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.system-row:hover { background: var(--bg-elevated); }
+.system-row input { width: auto; margin: 0; flex-shrink: 0; }
+.system-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.system-count { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+/* Настройки: вкладки «План», «Журнал», «Дашборд» */
+.settings-tabs { display: flex; gap: 4px; margin: 10px 0 14px; border-bottom: 1px solid var(--border); }
+.settings-tab {
+  padding: 7px 16px; font-size: 13px; cursor: pointer; margin-bottom: -1px;
+  background: none; border: 1px solid transparent; border-bottom: none; border-radius: 8px 8px 0 0;
+  color: var(--text-muted);
+}
+.settings-tab:hover { color: var(--text); }
+.settings-tab.active {
+  color: var(--text); font-weight: 600;
+  background: var(--bg-panel); border-color: var(--border); border-bottom-color: var(--bg-panel);
+}
+.settings-body { min-height: 220px; }
+
+/* Состав дашборда: блок, его пояснение и стрелки порядка */
+.block-list { list-style: none; margin: 0; padding: 0; }
+.block-row {
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center;
+  padding: 7px 8px; border: 1px solid transparent; border-radius: 7px;
+}
+.block-row.on { border-color: var(--border); background: var(--bg-elevated); }
+.block-check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.block-check input { width: auto; margin: 0; }
+.block-title { font-size: 13px; }
+.block-hint { grid-column: 1; }
+/* Стрелки стоят во второй колонке и во всю высоту строки: без явной
+   колонки они вставали сразу за текстом и прыгали по строке вслед за длиной
+   пояснения. */
+.block-move { grid-column: 2; grid-row: 1 / span 2; display: flex; align-items: center; gap: 2px; }
+.block-move button { padding: 3px 8px; font-size: 12px; line-height: 1; }
+
+/* Заголовок со значком системы: значок узнаётся быстрее слова. */
+.titled-with-icon { display: flex; align-items: center; gap: 8px; }
+/* В списках дашборда значок стоит перед названием, в одной строке с ним. */
+.dash-card .plain-list > li > .element-icon,
+.dash-card .plain-list > li > .element-mark { vertical-align: middle; margin-right: 6px; }
+
+/* Конструктор заявки: шаги сверху вниз */
+.request-builder .settings-section { border-top: 1px solid var(--border); padding-top: 10px; }
+.request-groups { display: flex; gap: 6px; flex-wrap: wrap; }
+.request-group {
+  padding: 6px 12px; font-size: 13px; cursor: pointer; border-radius: 999px;
+  border: 1px solid var(--border); background: none; color: var(--text-muted);
+}
+.request-group:hover { color: var(--text); }
+.request-group.active { color: #fff; font-weight: 600; background: var(--accent); border-color: var(--accent); }
+.request-group.group-outside.active { background: var(--group-outside); border-color: var(--group-outside); }
+.request-group.group-inside.active { background: var(--group-inside); border-color: var(--group-inside); }
+.request-group.group-automation.active { background: var(--group-automation); border-color: var(--group-automation); }
+
+.request-types { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.request-type {
+  display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 13px;
+  border: 1px solid var(--border); border-radius: 8px; background: none; cursor: pointer;
+}
+.request-type:hover { background: var(--bg-elevated); }
+.request-type.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); font-weight: 600; }
+
+/* Список элементов: как журнал, но с галочками и своей прокруткой. */
+.request-picker-actions { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.request-picker-table { max-height: 320px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.request-picker-table .journal-row { cursor: pointer; user-select: none; }
+.request-picker-table .journal-row.picked { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+
+/* Графы заявки: название, источник, порядок и пояснение. */
+.request-columns { list-style: none; margin: 0; padding: 0; }
+.request-column {
+  display: grid; grid-template-columns: 1fr 1fr auto; gap: 4px 8px; align-items: center;
+  padding: 6px 0; border-bottom: 1px solid var(--border);
+}
+.request-column input, .request-column select { margin: 0; }
+.request-column-move { display: flex; gap: 2px; }
+.request-column-move button { padding: 3px 8px; font-size: 12px; line-height: 1; }
+.request-column-hint { grid-column: 1 / -1; }
+
+/* Системы автоматики: у прибора две метки — своя и по системе. */
+.dash-systems > li { margin-bottom: 10px; }
+.dash-system-states { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+/* Экран подложки: действия сверху, масштаб — свёрнутым разделом под ними. */
+.backdrop-actions { border: none; padding: 0; margin: 0 0 14px; }
+.backdrop-actions .actions { margin-top: 8px; }
+.backdrop-scale { border-top: 1px solid var(--border); padding-top: 10px; }
+.backdrop-scale summary {
+  cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-muted);
+  list-style: none; padding: 4px 0;
+}
+.backdrop-scale summary::before { content: "▸ "; }
+.backdrop-scale[open] summary::before { content: "▾ "; }
+.backdrop-scale summary:hover { color: var(--text); }
+
+/* Вид, ни один элемент которого не на плане: галочке там нечего скрывать.
+   Строка приглушена, чтобы выключенная галочка не выглядела поломкой. */
+.summary-type-card.unplaced { opacity: .62; }
+.summary-type-card.unplaced .summary-type-visible { cursor: not-allowed; }
+
+/* Галочка раздела в сводке систем плана — рядом с его заголовком. */
+.summary-group-head { display: flex; align-items: center; gap: 6px; }
+.summary-group-check { display: inline-flex; align-items: center; flex-shrink: 0; cursor: pointer; }
+.summary-group-check input { width: auto; margin: 0; }
+.summary-group-head .summary-group-title { flex: 1 1 auto; min-width: 0; text-align: left; }
+
+/* ── Выпадающие списки: один вид на всю программу ─────────────────────────
+   Заказчик: «разные выпадающие списки в одной карточке выглядят по-разному…
+   привести все Select/Dropdown/ComboBox к единому компоненту и единому
+   дизайн-стандарту».
+
+   Классы общие у двух полей: `SelectField` (выбор из списка) и `ComboField`
+   (выбор или своё значение). Отличаются они только тем, можно ли вписать своё,
+   а рамка, высота, стрелка, раскрытый список и выделение выбранного — одни. */
+.picker-box, .combo-box { position: relative; display: flex; align-items: stretch; }
+.picker-input, .combo-input {
+  flex: 1 1 auto; min-width: 0; padding-right: 30px;
+  font: inherit; width: 100%; padding: 7px 9px; border-radius: 6px;
+  background: var(--bg-elevated); color: var(--text); border: 1px solid var(--border);
+}
+/* Кнопка выбора выглядит как поле ввода: одинаковая высота и выравнивание. */
+.picker-button { text-align: left; display: flex; align-items: center; min-height: 34px; }
+.picker-button:hover:not(:disabled) { border-color: var(--accent); background: var(--bg-elevated); }
+.picker-input:focus, .combo-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  outline-offset: -1px;
+}
+.picker-input:disabled, .combo-input:disabled { opacity: .6; }
+.picker-placeholder { color: var(--text-muted); }
+.picker-arrow, .combo-arrow {
+  position: absolute; right: 1px; top: 1px; bottom: 1px; width: 26px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; border-radius: 0 5px 5px 0;
+  color: var(--text-muted); font-size: 11px; line-height: 1; cursor: pointer;
+  pointer-events: none;
+}
+.combo-arrow { pointer-events: auto; }
+.combo-arrow:hover:not(:disabled) { color: var(--text); background: var(--bg-elevated); }
+.picker-list, .combo-list {
+  position: absolute; top: calc(100% + 3px); left: 0; right: 0; z-index: 30;
+  max-height: 220px; overflow-y: auto; padding: 4px;
+  display: flex; flex-direction: column;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: var(--shadow);
+}
+.picker-option, .combo-option {
+  text-align: left; background: none; border: none; border-radius: 5px;
+  padding: 6px 9px; font-size: 13px; color: var(--text); cursor: pointer;
+  white-space: nowrap;
+}
+.picker-option:hover, .combo-option:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.picker-option.chosen, .combo-option.chosen {
+  font-weight: 600; background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.picker-empty, .combo-empty { padding: 6px 9px; }
+
+/* Дашборд узла (часть П5) */
+.dashboard-panel { padding: 14px 16px; overflow-y: auto; height: 100%; }
+.dash-filters {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding-bottom: 10px; margin-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.dash-filters .checkbox { margin: 0; }
+.dashboard-panel h3 { margin: 14px 0 6px; }
+.dashboard-panel .tiles { margin: 0 0 8px; }
+
+.tile-note { font-size: 13px; font-weight: 400; color: var(--text-muted); margin-left: 6px; }
+.tile-ok { border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); }
+.tile-ok .tile-value { color: var(--ok); }
+.tile-warn { border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); }
+.tile-warn .tile-value { color: var(--warn); }
+.tile-danger { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
+.tile-danger .tile-value { color: var(--danger); }
+
+.dash-columns {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px;
+}
+.dash-card {
+  border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; background: var(--bg-panel);
+}
+
+/* Точка вида системы — тот же цвет, что у блока вкладок журнала */
+.group-dot {
+  display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+  margin-right: 8px; vertical-align: middle;
+}
+.group-dot.group-outside { background: var(--group-outside); }
+.group-dot.group-inside { background: var(--group-inside); }
+.group-dot.group-automation { background: var(--group-automation); }
+
+/* Журнал: три цветных блока вкладок (часть П4.1) */
+/* Три раздела — внутренние, наружные, автоматика — стоят в один ряд.
+   Спущенный вниз четвёртый ряд читался как «другое», хотя это такой же
+   раздел, и место под таблицу он отнимал зря. Ряд не переносится: разделов
+   всегда три, и делить их между строками нечем. */
+.journal-groups { display: flex; gap: 8px; flex-wrap: nowrap; margin-bottom: 10px; align-items: stretch; }
+.journal-group {
+  flex: 1 1 0; min-width: 0;
+  border: 1px solid var(--border); border-top-width: 3px; border-radius: 8px;
+  padding: 7px 9px 9px;
+}
+.journal-group.group-outside { border-top-color: var(--group-outside); }
+.journal-group.group-inside { border-top-color: var(--group-inside); }
+.journal-group.group-automation { border-top-color: var(--group-automation); }
+/* Заголовок раздела — тоже вкладка, и нажимается он как кнопка, а не как
+   надпись. Поэтому у него нет ни рамки, ни фона по умолчанию: лишняя кнопка
+   над рядом значков спорила бы с ними за внимание. */
+.journal-group-title {
+  display: block; width: 100%; text-align: left;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--text-muted); margin-bottom: 6px;
+  background: none; border: none; padding: 2px 0; cursor: pointer;
+}
+.journal-group-title:hover { color: var(--text); }
+/* Открытый раздел: подпись цветом раздела и жирная, блок обведён тем же
+   цветом с мягкой заливкой. Заказчик просит, чтобы выбранная вкладка была
+   видна сразу, — одного оттенка текста для этого мало. */
+.journal-group.active { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.journal-group.group-outside.active { border-color: var(--group-outside); }
+.journal-group.group-inside.active { border-color: var(--group-inside); }
+.journal-group.group-automation.active { border-color: var(--group-automation); }
+.journal-group.active > .journal-group-title { color: var(--text); font-weight: 700; }
+/* Значки видов внутри раздела переносятся и мельче: в трети ширины окна их
+   бывает десяток, и растягивать ряд разделов ради них нельзя. */
+.journal-group-tabs { display: flex; gap: 3px; flex-wrap: wrap; }
+/* Компактная вкладка — значок и число, а не полное название (ТЗ, Дополнение
+   3, К2): полное название вида системы уходит в подсказку при наведении,
+   иначе вкладки с длинными названиями растягивают журнал на весь экран. */
+.group-tab { display: flex; align-items: center; gap: 4px; padding: 2px 6px 2px 2px; font-size: 12px; }
+.group-tab .element-mark { min-width: 20px; font-size: 10px; padding: 1px 3px; }
+.group-tab.active {
+  background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.group-tab.active .muted { color: rgba(255,255,255,.75); }
+
+/* «Весь журнал» стоит первым в ряду разделов и по высоте равен им. */
+.journal-whole {
+  flex: 0 0 auto; align-self: stretch; padding: 6px 10px; line-height: 1.2;
+  font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted);
+  border: 1px dashed var(--border); border-radius: 8px; background: none; cursor: pointer;
+}
+.journal-whole:hover { color: var(--text); border-color: var(--accent); }
+.journal-whole.active {
+  border-style: solid; border-color: var(--accent); color: #fff; font-weight: 700;
+  background: var(--accent);
+}
+
+.journal-toolbar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.journal-export { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.journal-export button { padding: 6px 12px; font-size: 13px; }
+/* Встречные действия различаются не только подписью: выгрузка использует
+   стальной синий, загрузка — технический зелёный. */
+.journal-export button.primary {
+  background: var(--action-export);
+  border-color: var(--action-export);
+  color: var(--action-export-text);
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / .14);
+}
+.journal-export button.primary:hover:not(:disabled) {
+  background: var(--action-export-hover);
+  border-color: var(--action-export-hover);
+}
+.journal-export button.success {
+  background: var(--action-import);
+  border-color: var(--action-import);
+  color: var(--action-import-text);
+  font-weight: 500;
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / .14);
+}
+.journal-export button.success:hover:not(:disabled) {
+  background: var(--action-import-hover);
+  border-color: var(--action-import-hover);
+}
+
+/* Ступенчатый масштаб таблицы */
+.journal-scale { display: inline-flex; align-items: center; gap: 0; }
+.journal-scale button {
+  padding: 4px 9px; font-size: 13px; border-radius: 0; margin-left: -1px;
+}
+.journal-scale button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
+.journal-scale button:last-child { border-radius: 0 6px 6px 0; }
+.journal-scale-value { min-width: 52px; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+
+/* Список форматов под кнопкой выгрузки. Ловушка нажатий — прозрачный слой
+   под списком: щелчок мимо закрывает его, не задевая того, на что нажали. */
+.journal-menu { position: relative; }
+/* Ловушка щелчка мимо списка. Лежит выше окна проверки (z-index 50):
+   иначе внутри него щелчок мимо не закрывал бы список. */
+.journal-menu-catch { position: fixed; inset: 0; z-index: 60; }
+/* Список форматов ставится по окну, а не по кнопке: место ему считает
+   разметка, чтобы он не уходил за край и не уезжал при прокрутке. */
+.journal-menu-list {
+  position: fixed; z-index: 61; min-width: 168px;
+  display: flex; flex-direction: column; padding: 4px;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: var(--shadow);
+}
+.journal-menu-list button {
+  text-align: left; background: none; border: none; border-radius: 5px; padding: 7px 10px;
+}
+.journal-menu-list button:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+/* Поле «подпись + выпадающий список» в одну строку */
+.inline-field { display: inline-flex; align-items: center; gap: 6px; }
+.inline-field select { width: auto; padding: 4px 8px; font-size: 13px; }
+
+
+/* Состояние на значке плана: ободок, не заливка (часть П3.1) */
+.marker-ok { box-shadow: 0 0 0 2px var(--ok); }
+.marker-warn { box-shadow: 0 0 0 2px var(--warn); }
+.marker-danger { box-shadow: 0 0 0 3px var(--danger); }
+.marker-unknown { box-shadow: 0 0 0 2px var(--text-muted); }
+
+/* Карточка элемента: состояние по мероприятиям и три кнопки (части П6.2–П6.3) */
+.card-status {
+  border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; margin: 12px 0;
+}
+.card-status h4 { margin: 0 0 6px; }
+.status-rows { list-style: none; margin: 0; padding: 0; }
+.status-rows li { margin-bottom: 3px; }
+.status-row {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  background: none; border: 1px solid transparent; border-radius: 6px; padding: 5px 7px;
+}
+.status-row:hover:not(:disabled) { background: var(--bg-elevated); border-color: var(--border); }
+.status-row-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.card-links { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.card-buttons { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.card-buttons button { flex: 1 1 auto; padding: 6px 10px; font-size: 13px; }
+.technical-state {
+  display: block; width: 100%; padding: 7px 9px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--bg-elevated); font-weight: 600;
+}
+.technical-state-ok { color: var(--ok); border-color: var(--ok); }
+.technical-state-danger { color: var(--danger); border-color: var(--danger); }
+.technical-state-unknown { color: var(--text-muted); }
+
+/* Ободок состояния и на заголовке карточки — тот же язык, что на плане */
+/* Полоса шапки карточки красится тем же цветом, что точка значка на плане:
+   цвет считает ядро (placementCondition), здесь только краска. */
+.object-type[data-condition='ok'] { border-left: 3px solid var(--ok); padding-left: 8px; }
+.object-type[data-condition='warn'] { border-left: 3px solid var(--warn); padding-left: 8px; }
+.object-type[data-condition='danger'] { border-left: 3px solid var(--danger); padding-left: 8px; }
+.object-type[data-condition='unknown'] { border-left: 3px solid var(--text-muted); padding-left: 8px; }
+
+/* Окно истории элемента */
+.history-modal { width: 620px; }
+.history-checklist { list-style: none; margin: 6px 0 4px; padding: 0; font-size: 12px; }
+.history-checklist li { color: var(--danger); }
+.history-checklist li.done { color: var(--text-muted); }
+.history-signature {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  margin: 7px 0 2px; padding: 4px 8px; border-color: color-mix(in srgb, var(--ok) 70%, var(--border));
+  background: color-mix(in srgb, var(--ok) 9%, var(--bg-panel)); color: var(--ok);
+  font-size: 12px; text-align: left;
+}
+.history-signature:hover:not(:disabled) { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, var(--bg-panel)); }
+.history-signature-date { color: var(--text-muted); white-space: nowrap; }
+.history-signature-empty { margin-top: 5px; }
+
+/* Окно склада: состав вместо плана */
+.storage-panel { padding: 10px 14px; height: 100%; overflow-y: auto; }
+.storage-panel.over { background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
+.storage-group { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 12px; }
+.storage-group h3 {
+  display: flex; align-items: center; gap: 8px; text-transform: none;
+  font-size: 14px; color: var(--text); margin-bottom: 8px;
+}
+.storage-list {
+  list-style: none; display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 6px; margin: 0; padding: 0;
+}
+.storage-item {
+  width: 100%; min-width: 0; padding: 4px 9px; font-size: 12px; border-radius: 5px;
+  display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: center; gap: 7px;
+  text-align: left;
+}
+.storage-item .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/*
+ * Значок в резерве и на складе всегда одного размера.
+ *
+ * Заказчик: «значки в графе резерв должны быть одинаковые по размеру, не важно
+ * какой учётный номер там написан». Знак вида бывает двух видов: картинка —
+ * она и так 28 на 28 — и буквенная пометка, ширина которой росла по числу
+ * букв: «ОП» уже, «ОУ-2» шире. В ряду из десятка единиц знаки выстраивались
+ * лесенкой.
+ *
+ * Теперь пометке задан тот же размер, что и картинке, а длинная надпись
+ * ужимается по буквам, а не растягивает знак.
+ */
+.pending-item > .element-mark,
+.storage-list .element-mark {
+  width: 28px; min-width: 28px; max-width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; overflow: hidden; font-size: 10px; letter-spacing: -.02em;
+}
+.storage-item.selected { border-color: var(--accent); }
+
+/* Заголовок правой панели, когда выбран объект: название + статус-пилюля */
+.panel-head-object { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-width: 0; }
+/* Перенос только по словам: «Извещатель пожарный дымовой» разрывался посреди
+   слова, и название читалось как опечатка. Место под него берётся не у кнопок —
+   они уехали на строку ниже. */
+.panel-head-title {
+  font-weight: 600; font-size: 14px;
+  overflow-wrap: normal; word-break: normal; hyphens: none;
+}
+.status-pill {
+  display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px;
+  border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap;
+  border: 1px solid currentColor;
+}
+
+/* Кольцевая диаграмма (DonutChart) */
+.donut-chart { flex-shrink: 0; }
+.donut-center-value { font-size: 20px; font-weight: 700; fill: var(--text); }
+.donut-center-label { font-size: 10px; fill: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+
+.dash-overview { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin: 4px 0 14px; }
+.dash-overview .tiles { flex: 1; margin: 0; }
+
+.dash-card-donut { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.dash-card-donut .plain-list { text-align: left; width: 100%; }
+.dash-legend > li { margin-bottom: 2px; }
+
+/*
+ * Широкий блок занимает всю ширину сетки.
+ *
+ * График динамики и полосы по объектам в колонке шириной 300 px нечитаемы:
+ * подписи дат налезают друг на друга, а полоса вырождается в цветную нить.
+ */
+.dash-card-wide { grid-column: 1 / -1; }
+
+.donut-arc-clickable { cursor: pointer; }
+.donut-arc-clickable:hover { opacity: .82; }
+
+/* График динамики (TrendChart) */
+.trend-chart { width: 100%; }
+.trend-axis { stroke: var(--border); stroke-width: 1; }
+.trend-cursor { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.trend-scale { display: flex; justify-content: space-between; margin-top: 2px; }
+.trend-readout {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px;
+  min-height: 22px; margin-top: 6px;
+}
+.trend-readout-item { white-space: nowrap; }
+
+/* Полоса состояний (StatusBar) */
+.status-bar {
+  display: flex; height: 10px; border-radius: 5px; overflow: hidden;
+  background: var(--bg-elevated); margin-top: 4px;
+}
+.status-bar-part { display: block; height: 100%; border: 0; padding: 0; }
+.status-bar-part-clickable { cursor: pointer; }
+.status-bar-part-clickable:hover { filter: brightness(1.15); }
+
+/* Состояние по объектам */
+.dash-places > li { margin-bottom: 10px; }
+.dash-place-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+
+/* Системы с проблемами */
+.dash-problems > li { margin-bottom: 10px; }
+.dash-problem-head { display: flex; align-items: center; gap: 6px; }
+.dash-problem-head .error { margin-left: auto; white-space: nowrap; }
+.dash-problem-bar {
+  height: 6px; border-radius: 3px; background: var(--bg-elevated); margin: 4px 0 2px; overflow: hidden;
+}
+.dash-problem-bar > span { display: block; height: 100%; background: var(--danger); }
+
+/* Таблицы дашборда: просроченное и неисправное */
+.dash-table { width: 100%; border-collapse: collapse; }
+.dash-table th {
+  text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--text-muted); padding: 0 8px 4px 0;
+}
+.dash-table td { padding: 5px 8px 5px 0; border-top: 1px solid var(--border); vertical-align: top; }
+.dash-table td:last-child, .dash-table th:last-child { padding-right: 0; text-align: right; }
+.dash-table .element-icon, .dash-table .element-mark { vertical-align: middle; margin-right: 6px; }
+
+.dash-upcoming > li { margin-bottom: 3px; }
+
+/* Журнал: строка поиска и статус-пилюля состояния всей строки */
+.journal-search { width: 200px; }
+.journal-th-period { font-weight: 400; text-transform: none; letter-spacing: normal; }
+.journal-subhead { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+
+/* Нижняя панель фильтра — план и журнал (ТЗ, Дополнение 3, часть К3) */
+/* Строка состояния держится одним рядом: она подводит итог тому, что выше, и
+   разъезжаясь на два ряда перестаёт читаться как итог. Если места совсем мало,
+   ряд прокручивается вбок, а не переносится. */
+.status-filter-bar {
+  display: flex; align-items: stretch; gap: 8px;
+  padding: 6px 9px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;
+}
+.status-filter-label {
+  flex: 0 0 auto; align-self: center; font-size: 11px; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--text-muted);
+}
+/*
+ * Строка состояния — всегда одна строка.
+ *
+ * Заказчик: «бывает, что внизу состояние показывает не в одну строку, а в две.
+ * Такого быть не должно». Прежде метки переносились на второй ряд, когда
+ * колонка сужалась, — и нижняя панель то в один ряд, то в два, а план под ней
+ * скакал по высоте на каждое открытие боковой панели.
+ *
+ * Метки при этом не обрезаются: «просрочено» и «неисправно» — разные
+ * состояния, и по огрызку «просроч…» их не различить. Когда места совсем нет,
+ * строка прокручивается вбок, оставаясь одной строкой. Прокрутка ничего не
+ * прячет насовсем, а перенос менял высоту всей панели.
+ */
+.status-filter-chips {
+  display: flex; align-items: stretch; gap: 4px; flex: 1 1 auto; min-width: 0;
+  flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin;
+}
+.status-filter-reset {
+  flex: 0 0 auto; align-self: center; width: 24px; height: 24px; padding: 0;
+  font-size: 13px; line-height: 1; border-radius: 50%;
+  background: none; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer;
+}
+.status-filter-reset:hover { color: var(--text); border-color: var(--text-muted); }
+
+/* Метка состояния: точка, название, число. Всё нажимается целиком. */
+.status-chip {
+  display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto;
+  padding: 4px 8px 4px 6px; font-size: 12px; line-height: 1.25;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--bg-panel); color: var(--text-muted); cursor: pointer;
+}
+.status-chip:hover { color: var(--text); border-color: var(--text-muted); }
+/* Подпись не рвётся и не обрезается: «просрочено» и «неисправно» — разные
+   состояния, и по огрызку «просроч…» их не различить. Метка целиком уходит за
+   край прокрутки, но не сминается. */
+.status-chip-name { white-space: nowrap; }
+.status-chip-count {
+  font-variant-numeric: tabular-nums; font-size: 11px; flex-shrink: 0;
+  padding: 0 4px; border-radius: 999px;
+  background: color-mix(in srgb, var(--text-muted) 18%, transparent);
+}
+/* Выбранное состояние окрашивается своим цветом — тем же, каким оно
+   показано на плане и в колонке «Состояние». */
+.status-chip.on { color: var(--text); font-weight: 600; }
+.status-filter-ok .status-dot { background: var(--ok); }
+.status-filter-warn .status-dot { background: var(--warn); }
+.status-filter-danger .status-dot { background: var(--danger); }
+.status-filter-unknown .status-dot { background: var(--text-muted); }
+.status-filter-ok.on {
+  border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--bg-panel));
+}
+.status-filter-warn.on {
+  border-color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, var(--bg-panel));
+}
+.status-filter-danger.on {
+  border-color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, var(--bg-panel));
+}
+.status-filter-unknown.on {
+  border-color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 14%, var(--bg-panel));
+}
+.status-chip.on .status-chip-count { background: color-mix(in srgb, var(--text) 14%, transparent); }
+
+.plan-bottom-filter {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px 0 2px;
+}
+.type-filter-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 6px 10px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;
+}
+.type-filter-check { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.type-filter-check input { width: auto; margin: 0; }
+.type-filter-check .element-mark { min-width: 24px; padding: 0 4px; font-size: 10px; }
+
+.journal-groups + .journal-toolbar { margin-top: 0; }
+.journal .status-filter-bar { margin-top: 10px; }
+
+.dash-group-link {
+  background: none; border: none; padding: 0; color: inherit; font: inherit;
+  cursor: pointer; display: inline-flex; align-items: center;
+}
+.dash-group-link:hover:not(:disabled) { background: none; color: var(--accent); }
+.dash-group-link:disabled { cursor: default; opacity: 1; }
+
+/* Контекстное меню объекта на плане (К7) */
+/*
+ * Цвет текста задаётся здесь, а не наследуется.
+ *
+ * Меню всплывает там, где стоит его кнопка, — в том числе в шапке программы. У
+ * шапки свой тёмный фон и светлый текст в обеих темах, и меню, унаследовав от
+ * неё цвет, оказывалось на светлой теме белым по белому: колокольчик
+ * открывался, а слов в нём не было видно вовсе. Фон меню всегда панельный —
+ * значит и цвет должен быть панельный.
+ */
+.context-menu {
+  position: fixed; z-index: 60; display: flex; flex-direction: column;
+  min-width: 160px; padding: 4px; border-radius: 8px;
+  background: var(--bg-panel); color: var(--text);
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+}
+/* Пункты меню — строки-команды без рамок. Кнопки формы, вложенной в меню,
+   под это правило не подпадают: «Добавить» остаётся обычной кнопкой, иначе её
+   не отличить от пункта. */
+.context-menu > button {
+  text-align: left; background: none; border: none; border-radius: 5px;
+  padding: 7px 10px; font-size: 13px;
+}
+.context-menu > button:hover:not(:disabled) { background: var(--bg-elevated); }
+
+/* Единый чек-лист на несколько видов работ (К8) */
+.checklist-modal { width: min(960px, calc(100vw - 40px)); max-height: calc(100vh - 40px); overflow: auto; }
+.work-kinds { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-bottom: 6px; }
+.work-kind-section {
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 10px 0;
+}
+.work-kind-section h4 { margin: 0 0 8px; text-transform: none; font-size: 14px; color: var(--text); }
+.checklist-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.checklist-item { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.checklist-item-text { flex: 1 1 240px; min-width: 0; }
+.checklist-item.done .checklist-item-text { text-decoration: line-through; color: var(--text-muted); }
+.checklist-item select { width: auto; min-width: 190px; }
+.checklist-defect {
+  flex: 1 1 100%; border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg-elevated));
+}
+.batch-picker, .maintenance-evidence, .measurement-fields, .validation-summary {
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 10px 0;
+}
+.batch-picker summary { cursor: pointer; font-weight: 600; }
+.measurement-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.maintenance-evidence .document-picker { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.validation-summary { color: var(--danger); background: color-mix(in srgb, var(--danger) 7%, var(--bg-panel)); }
+.validation-summary ul { margin: 6px 0 0; padding-left: 20px; }
+.technical-state-warn { color: var(--warn); border-color: var(--warn); }
+.activity-applicability { display: grid; gap: 7px; }
+.activity-applicability .checkbox { align-items: flex-start; }
+.activity-applicability small { display: block; color: var(--text-muted); margin-top: 2px; }
+.external-result-row {
+  display: grid; grid-template-columns: minmax(220px, 1fr) 220px; gap: 8px;
+  align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.external-result-row input { grid-column: 1 / -1; }
+/*
+ * Окно настроек не меняет размер при переходе между вкладками.
+ *
+ * Заказчик: «во вкладке «Журнал» в настройках сделай, чтобы окно выводилось
+ * такого же размера, как при открытии других вкладок, чтобы окно не скакало».
+ * Вкладка «Журнал» короче прочих — окно под неё сжималось, и вкладки вместе с
+ * кнопкой закрытия прыгали под курсором.
+ *
+ * Высота задана долей окна: содержимое прокручивается внутри, а сама рамка
+ * стоит на месте.
+ */
+.settings-modal {
+  width: min(900px, calc(100vw - 40px));
+  height: min(760px, calc(100vh - 40px));
+  display: flex; flex-direction: column;
+}
+/* Прокручивается только содержимое: заголовок и вкладки остаются на виду. */
+.settings-modal > .settings-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.settings-section { border: 1px solid var(--border); border-radius: 9px; padding: 12px; margin: 10px 0; }
+.settings-section h4 { margin-top: 0; }
+.settings-type-tabs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+.settings-type-tabs button.active { background: var(--accent); color: white; border-color: var(--accent); }
+.gost-card { border: 1px solid var(--border); border-radius: 9px; padding: 12px; margin-top: 14px; }
+.gost-card h4 { margin-top: 0; }
+.gost-card-grid { display: grid; gap: 0; margin: 8px 0 12px; }
+.gost-card-grid > div { display: grid; grid-template-columns: minmax(130px, 42%) 1fr; border-top: 1px solid var(--border); padding: 6px 0; }
+.gost-card-grid dt { color: var(--text-muted); }
+.gost-card-grid dd { margin: 0; overflow-wrap: anywhere; }
+.object-documents { border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin: 8px 0 12px; }
+.object-documents h4 { margin: 0 0 6px; }
+.object-documents ul { margin: 0; padding-left: 18px; }
+.stored-document-actions { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.history-documents { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.gost-card-signature { display: flex; flex-wrap: wrap; gap: 8px 18px; border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 12px; }
+.card-export-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.measurement-fields summary { cursor: pointer; font-weight: 600; }
+
+/* Конструктор регламентов ТО (Дополнение 5, часть Р13) */
+.regulation-constructor { padding: 4px 2px; }
+.periodicity {
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; margin: 8px 0; border-top-width: 3px; border-top-color: var(--border);
+}
+/* Используемая периодичность выделена сверху: видно с одного взгляда, что
+   входит в регламент, а что организация не ведёт. */
+.periodicity.used { border-top-color: var(--accent); }
+.periodicity-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.periodicity-toggle { text-decoration: none; font-weight: 600; font-size: 14px; color: var(--text); }
+.periodicity-toggle:hover:not(:disabled) { color: var(--accent); }
+.periodicity-use { margin: 0 0 0 auto; }
+.periodicity-body { padding: 8px 0 0 18px; }
+
+.activity-list { list-style: none; margin: 0 0 6px; padding: 0; }
+.activity-list li { padding: 4px 0; border-bottom: 1px solid var(--border); }
+.activity-list li:last-child { border-bottom: none; }
+.activity-list .checkbox { margin: 0; }
+/* Обязательное требование НПА видно по пометке рядом с основанием. Галочка
+   рабочая: снять её можно, но через подтверждение — см. RegulationConstructor. */
+.activity-list .checkbox.mandatory { font-weight: 600; }
+.activity-source { padding-left: 26px; }
+
+.regulation-actions { justify-content: flex-start; flex-wrap: wrap; }
+
+/* Раздел «Регламентные мероприятия»: слева виды, справа конструктор */
+.regulations-modal { width: 900px; max-width: 94vw; }
+.regulations-body { display: flex; gap: 16px; align-items: flex-start; }
+.regulations-types {
+  width: 220px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px;
+  max-height: 60vh; overflow-y: auto;
+}
+.type-row {
+  text-align: left; background: none; border: 1px solid transparent; border-radius: 6px;
+  padding: 6px 9px; font-size: 13px;
+}
+.type-row:hover:not(:disabled) { background: var(--bg-elevated); }
+.type-row.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.regulations-editor { flex: 1; min-width: 0; max-height: 60vh; overflow-y: auto; }
+
+/* Итоговый регламент: читается как документ, а не как форма */
+.preview-block { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 12px; }
+.preview-block h4 { text-transform: none; font-size: 14px; color: var(--text); margin: 0 0 6px; }
+.preview-list { margin: 4px 0 0 18px; padding: 0; }
+.preview-list li { padding: 3px 0; }
+.preview-skipped { margin-top: 6px; }
+.preview-skipped summary { cursor: pointer; }
+
+/* Уровень назначения регламента и то, что уже действует сверху (часть Р7) */
+.regulation-scope-bar {
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; margin-bottom: 12px; background: var(--bg-elevated);
+}
+.regulation-scope-bar .field { margin-bottom: 6px; }
+.regulation-scope-bar p { margin: 4px 0 0; }
+/* Унаследованное отделено полосой слева: это чужое требование, не своё —
+   его тут не редактируют, а принимают к сведению. */
+.inherited-block { border-left: 3px solid var(--accent); padding-left: 10px; margin-top: 8px; }
+.inherited-list { list-style: none; margin: 4px 0; padding: 0; }
+.inherited-list li { padding: 2px 0; }
+
+/* Шаблоны регламентов (часть Р12) */
+.regulation-templates { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 10px; }
+.regulation-templates h4 { margin: 0 0 6px; }
+.regulation-templates .field-row { align-items: flex-end; gap: 8px; }
+.regulation-templates p { margin: 6px 0 0; }
+
+/* Локальные нормативные документы (часть Р6) */
+.documents-modal { width: 880px; max-width: 94vw; }
+.documents-body { display: flex; gap: 16px; align-items: flex-start; }
+.documents-list {
+  width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px;
+  max-height: 60vh; overflow-y: auto;
+}
+.documents-list .type-row { display: flex; flex-direction: column; gap: 1px; }
+.documents-editor { flex: 1; min-width: 0; max-height: 60vh; overflow-y: auto; }
+.document-file { align-items: center; gap: 10px; }
+.regulation-documents { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 10px; }
+.regulation-documents h4 { margin: 0 0 6px; }
+
+/* Перенос старой настройки в общий механизм (часть Р16) */
+.settings-migration {
+  border-left: 3px solid var(--accent); padding-left: 10px; margin-top: 12px;
+}
+.settings-migration p { margin: 0 0 6px; }
+
+/* Свой регламент отдельного элемента (часть Р7, уровень «элемент») */
+.element-regulation { max-height: 68vh; }
+.element-regulation > p:first-child { margin-top: 0; }
+
+/* Подтверждение отключения требования НПА (Дополнение 5, часть Р8) */
+.confirm-modal { width: 520px; max-width: 92vw; }
+.confirm-modal p { margin: 6px 0; }
+/* Кнопка отказа от обязательного требования выглядит как отказ, а не как
+   обычное действие: нажимают её редко и осознанно. */
+button.danger {
+  background: var(--danger); border-color: var(--danger); color: #fff;
+}
+button.danger:hover:not(:disabled) { filter: brightness(1.08); }
+
+/* Левая часть конструктора: разделы систем со значками */
+.type-group { margin-bottom: 10px; }
+.type-group h5 {
+  margin: 0 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--muted);
+}
+.regulations-types .type-row {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+}
+.type-row-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Вложенный вид виден отступом: это подвид того, что строкой выше. */
+.type-row.nested { padding-left: 22px; }
+.type-row-parent { font-weight: 600; }
+.type-group-note { padding: 2px 8px 6px 22px; }
+
+.type-row-overview {
+  margin-bottom: 10px;
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg-panel));
+  font-weight: 600;
+}
+.regulation-overview-mark {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.type-row-overview.active .regulation-overview-mark {
+  color: #fff;
+  background: rgba(255, 255, 255, .16);
+}
+.type-group h5 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 7px;
+  border-left: 3px solid currentColor;
+  border-radius: 0 5px 5px 0;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+.type-group-outside h5 { color: var(--group-outside); }
+.type-group-inside h5 { color: var(--group-inside); }
+.type-group-automation h5 { color: var(--group-automation); }
+.type-group-outside { --regulation-group-focus: var(--group-outside); }
+.type-group-inside { --regulation-group-focus: var(--group-inside); }
+.type-group-automation { --regulation-group-focus: var(--group-automation); }
+.type-group.focused {
+  outline: 2px solid color-mix(in srgb, var(--regulation-group-focus) 58%, transparent);
+  outline-offset: -1px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--regulation-group-focus) 7%, transparent);
+}
+.regulation-group-icon {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.regulations-overview { padding: 6px 4px; }
+.regulations-overview h3 { margin: 2px 0 5px; }
+.regulations-overview > p { max-width: 620px; }
+.regulations-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+.regulations-overview-card {
+  --regulation-group-color: var(--accent);
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 88px;
+  padding: 12px;
+  text-align: left;
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--regulation-group-color) 58%, var(--border));
+  border-top: 3px solid var(--regulation-group-color);
+  background: color-mix(in srgb, var(--regulation-group-color) 8%, var(--bg-panel));
+}
+.regulations-overview-card.group-outside { --regulation-group-color: var(--group-outside); }
+.regulations-overview-card.group-inside { --regulation-group-color: var(--group-inside); }
+.regulations-overview-card.group-automation { --regulation-group-color: var(--group-automation); }
+.regulations-overview-card:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--regulation-group-color);
+  background: color-mix(in srgb, var(--regulation-group-color) 14%, var(--bg-panel));
+}
+.regulations-overview-card .regulation-group-icon {
+  width: 30px;
+  height: 30px;
+  color: var(--regulation-group-color);
+}
+.regulations-overview-card strong,
+.regulations-overview-card small { display: block; }
+.regulations-overview-card strong { text-transform: none; }
+.regulations-overview-card small { margin-top: 4px; color: var(--text-muted); font-weight: 400; }
+.regulations-overview-arrow { color: var(--regulation-group-color); font-size: 20px; }
+@media (max-width: 920px) {
+  .regulations-overview-grid { grid-template-columns: 1fr; }
+}
+
+/* Состав системы пожарной автоматики (Дополнение 6) */
+.system-composition { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px; }
+.system-composition h4 { margin: 0 0 6px; }
+.composition-list { list-style: none; margin: 8px 0; padding: 0; }
+.composition-row { padding: 4px 0; border-bottom: 1px solid var(--border); }
+.composition-row:last-child { border-bottom: none; }
+/* Вид, которого в системе нет, приглушён: список длинный, и глаз должен
+   цепляться за то, что заведено. */
+.composition-row:not(.has-items) { opacity: .55; }
+.composition-head { display: flex; align-items: center; gap: 8px; }
+.composition-title { flex: 1; min-width: 0; max-width: 150px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composition-count { width: 52px; text-align: right; padding: 2px 4px; }
+.composition-floors { padding: 2px 0 0 30px; }
+.composition-members { list-style: none; margin: 4px 0 4px 30px; padding: 0; }
+.composition-members li { padding: 1px 0; }
+
+/* Срок с подсветкой: зелёный — в сроках, жёлтый — подходит, красный — просрочен */
+.due-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; white-space: nowrap; }
+.due-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.due-ok { color: var(--ok, #16a34a); }
+.due-soon { color: var(--warn, #ca8a04); }
+.due-late { color: var(--danger, #dc2626); }
+/* «Нет данных» — не тревога и не норма: серым, чтобы не спорил за внимание
+   с настоящей просрочкой. */
+.due-unknown { color: var(--muted); }
+
+/* Выбор периодичности в чек-листе идёт первым */
+.checklist-periodicity { border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 10px; }
+.checklist-periodicity h4 { margin: 0 0 6px; }
+/* Периодичность и её пункты — один блок: название нигде не повторяется. */
+.periodicity-block { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.periodicity-block:last-child { border-bottom: none; }
+.periodicity-block .periodicity-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.periodicity-block .checkbox { margin: 0; display: inline-flex; }
+/* Раскрытые пункты отделены полосой от строки выбора: видно, к чему относятся. */
+.periodicity-block.picked .checklist-items { border-left: 2px solid var(--accent); padding-left: 10px; margin-left: 8px; }
+.periodicity-block .external-result-row { padding-left: 26px; margin-top: 4px; }
+
+
+/* Состав системы: строками вниз, чтобы панель не уезжала вбок */
+.composition-rows { list-style: none; margin: 6px 0; padding: 0; }
+.composition-row {
+  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center;
+  gap: 7px; padding: 3px 0; border-bottom: 1px solid var(--border);
+}
+.composition-row:last-child { border-bottom: none; }
+.composition-cell { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.composition-title { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composition-count { width: 56px; text-align: right; padding: 2px 4px; }
+/* Раскрытый список элементов занимает всю ширину строки, под её полями. */
+.composition-members { grid-column: 1 / -1; list-style: none; margin: 2px 0 4px 30px; padding: 0; }
+.composition-members li { padding: 1px 0; }
+.composition-add { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+.composition-add select { flex: 1; min-width: 0; }
+/* Этаж в составе системы: заголовок с итогом, под ним оборудование этажа */
+.composition-floor + .composition-floor { margin-top: 8px; }
+.composition-floor h5 {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+  border-bottom: 1px solid var(--border); padding-bottom: 2px;
+}
+.composition-floor h5 .muted { text-transform: none; letter-spacing: 0; font-size: 11px; }
+.composition-floor h5 .small { text-transform: none; letter-spacing: 0; }
+/* Состав системы: заголовок с кнопкой правки и итогом */
+.composition-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.composition-head h4 { margin: 0; }
+.composition-total { margin: 2px 0 8px; }
+
+/* Просмотр состава: вид оборудования и номера его элементов ссылками */
+.composition-view { list-style: none; margin: 4px 0 0; padding: 0; }
+.composition-view li + li { border-top: 1px solid var(--border); }
+/* Строка вида целиком кнопка: щелчок раскрывает учётные номера. */
+.composition-line {
+  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 7px;
+  width: 100%; padding: 5px 0; background: none; border: none; color: inherit;
+  text-align: left; cursor: pointer;
+}
+.composition-line:hover .composition-title { text-decoration: underline; }
+.composition-view .composition-title { font-size: 12px; min-width: 0; }
+.composition-amount { white-space: nowrap; }
+.composition-numbers { display: flex; flex-wrap: wrap; gap: 3px; margin: 0 0 6px 30px; }
+.composition-chip {
+  font-size: 11px; line-height: 1.5; padding: 0 5px; border-radius: 3px;
+  border: 1px solid var(--border); background: var(--bg-elevated); color: inherit; cursor: pointer;
+  max-width: 100%; overflow-wrap: anywhere;
+}
+.composition-chip:hover { border-color: var(--text-muted); }
+/* Не расставленный на плане виден сразу: его ещё предстоит найти на чертеже. */
+.composition-chip.unplaced { border-style: dashed; color: var(--text-muted); }
+
+/* Резервное питание прибора приёмно-контрольного */
+.backup-power {
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; margin: 8px 0;
+  /* Браузер не даёт fieldset стать уже своего содержимого, а внутри длинные
+     варианты списка («источник бесперебойного питания (ИБП)»). Панель узкая и
+     шире не станет, поэтому право сжиматься возвращается явно. */
+  min-inline-size: 0;
+}
+.backup-power legend { padding: 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+
+/* Проектная документация по системе: перетаскивание файла в карточку */
+.project-documents { margin: 10px 0; }
+.drop-zone {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  border: 1px dashed var(--border); border-radius: 6px; padding: 10px 8px; text-align: center;
+  /*
+   * position: relative обязателен, и не ради самой зоны.
+   *
+   * Внутри лежит скрытое поле выбора файла, а оно позиционировано
+   * абсолютно. Без позиционированного предка оно привязывается к документу
+   * и встаёт там, где оказалось бы в потоке, — глубоко внизу длинной
+   * карточки прибора. Страница от этого получает высоту в полторы тысячи
+   * точек при экране в семьсот, начинает прокручиваться целиком, и вся
+   * раскладка на 100vh разъезжается. Проверено на разметке: высота
+   * документа падает с 1463 до 720 точек.
+   */
+  position: relative;
+}
+.drop-zone.over { border-color: var(--accent, #2563eb); background: var(--bg-elevated); }
+/* Файлы документации — значками, как в проводнике */
+.project-documents.over { outline: 2px dashed var(--accent, #2563eb); outline-offset: 3px; border-radius: 6px; }
+.file-tiles {
+  list-style: none; margin: 6px 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px 6px;
+}
+.file-tiles li { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.file-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  width: 100%; padding: 5px 2px; border: 1px solid transparent; border-radius: 6px;
+  background: none; color: inherit; cursor: pointer;
+}
+.file-tile:hover { border-color: var(--border); background: var(--bg-elevated); }
+.file-glyph { width: 34px; height: 41px; flex-shrink: 0; }
+/* Имя в две строки: длинное имя файла обрезается, полное — в подсказке. */
+.file-tile-name {
+  font-size: 10px; line-height: 1.25; text-align: center; width: 100%;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; overflow-wrap: anywhere;
+}
+.file-tile-actions { display: flex; gap: 6px; }
+.file-tile-actions .link { font-size: 10px; }
+/* Копия таблички-указателя пожарного гидранта */
+.hydrant-sign-block { margin: 10px 0; }
+/* container-type нужен полям расстояний: их шрифт задан в долях ширины
+   таблички, чтобы совпадать с надписями внутри рисунка при любом размере. */
+.hydrant-sign { position: relative; width: 100%; max-width: 240px; margin: 6px auto; container-type: inline-size; }
+.hydrant-sign svg { display: block; width: 100%; height: auto; }
+.hydrant-sign .sign-big { font-size: 22px; font-weight: 800; fill: #dc2626; letter-spacing: 1px; }
+/* Все надписи одного размера, как на бланке: образец, сеть, номер и расстояния.
+   10 единиц рисунка — ровно те же 10 % ширины, что и 10cqw у полей ниже. */
+.hydrant-sign .sign-small { font-size: 10px; font-weight: 700; fill: #dc2626; }
+.hydrant-sign .sign-dash { stroke: #dc2626; stroke-width: 2.5; }
+/* Заполняемое место обведено пунктиром и видно, даже пока пустое: иначе
+   табличка выглядит готовой, хотя на ней нет ни образца, ни сети, ни номера. */
+.hydrant-sign .sign-slot { fill: none; stroke: #dc2626; stroke-width: .7; stroke-dasharray: 2 1.5; }
+.hydrant-sign .sign-line { stroke: #dc2626; stroke-width: 4; }
+.hydrant-sign .sign-arrow { fill: #dc2626; }
+/*
+ * Поля стоят там, где цифры нанесены краской, — у своей стрелки. Размер в
+ * процентах от ширины таблички: она тянется по ширине панели, и поле обязано
+ * ехать вместе с ней.
+ */
+.hydrant-sign .sign-input {
+  position: absolute; width: 30%; padding: 0; text-align: center;
+  font-size: 10cqw; font-weight: 700; color: #dc2626; line-height: 1.3;
+  background: #fff; border: 1px dashed #dc2626; border-radius: 3px;
+}
+.hydrant-sign .sign-input::placeholder { color: #f19a9a; font-weight: 400; }
+.hydrant-sign .sign-input-ahead { left: 35%; top: 54%; }
+.hydrant-sign .sign-input-left { left: 7%; top: 76%; }
+.hydrant-sign .sign-input-right { left: 63%; top: 76%; }
+.actions-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+
+/* Разделы библиотеки элементов */
+.library-section + .library-section { border-top: 1px solid var(--border); margin-top: 10px; padding-top: 8px; }
+.library-section h5 {
+  margin: 0 0 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+}
+.library-section-note { margin: 0 0 6px; }
+
+/* Работы чек-листа разложены по срокам обслуживания */
+.periodicity-group { margin-bottom: 10px; }
+.periodicity-group + .periodicity-group { border-top: 1px solid var(--border); padding-top: 8px; }
+.periodicity-group-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.periodicity-group-head h5 {
+  margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .03em;
+}
+/* Работы внутри срока — с отступом: видно, что они относятся к заголовку. */
+.periodicity-group .periodicity-block { padding-left: 10px; border-bottom: none; }
+
+/* Поле, которое заполняется программой: правится не здесь, а там, где назначено */
+.readonly-field {
+  display: block; padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--surface-2, rgba(127, 127, 127, .08)); color: var(--text);
+}
+
+/* Комплект в одном месте хранения (Дополнение 6) */
+.placement-units { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px; }
+.placement-units h4 { margin: 0 0 6px; }
+.placement-count { align-items: flex-end; gap: 8px; }
+.placement-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.placement-unit { border-bottom: 1px solid var(--border); }
+.placement-unit:last-child { border-bottom: none; }
+.placement-unit-head {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 2px;
+  background: none; border: none; text-align: left; cursor: pointer; color: inherit;
+}
+.placement-unit-title { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.placement-unit.open .placement-unit-head { font-weight: 600; }
+/* Поля единицы с отступом: видно, что они относятся к строке выше. */
+.placement-unit-body { padding: 4px 0 10px 20px; border-left: 2px solid var(--border); margin-left: 6px; }
+
+/* Галочка стоит у названия срока, а не у работы внутри него */
+.periodicity-group-head .checkbox { margin: 0; display: inline-flex; align-items: baseline; gap: 6px; }
+.periodicity-group-head .checkbox h5 { margin: 0; }
+.commissioned-new { margin: 2px 0 8px; }
+
+/* Логические ограничения: запрет и предупреждение выглядят по-разному */
+.validation-summary.error { border-left: 3px solid var(--danger); }
+.validation-summary.warn { border-left: 3px solid var(--warn, #ca8a04); }
+.validation-summary.warn strong { color: var(--warn, #ca8a04); }
+
+
+/* Оговорка над составом работ: чем задан порядок обслуживания этого вида */
+.banner.note {
+  border-left: 3px solid var(--accent); background: var(--surface-2, rgba(127,127,127,.08));
+  padding: 8px 10px; margin: 0 0 10px; font-size: 12px; line-height: 1.4;
+}
+
+/* Копия таблички-указателя пожарного водоисточника */
+.water-sign-block { margin: 10px 0; }
+/* Размер и высота букв — как у таблички гидранта: обе стоят в одной панели.
+   container-type нужен полосе: её шрифт задан в долях ширины таблички. */
+.water-sign {
+  width: 100%; max-width: 240px; margin: 6px auto; container-type: inline-size;
+}
+.water-sign-picture { display: block; width: 100%; height: auto; }
+.water-sign-strip {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: #f1f5f9; border: 1px solid #cbd5e1; border-top: none;
+  padding: 5px 6px; margin-top: -1px;
+}
+.water-sign-strip span {
+  font-size: 10cqw; font-weight: 800; color: #0f172a; line-height: 1.2;
+  max-width: 100%; text-align: center; overflow-wrap: anywhere;
+}
+
+/* Акт проверки в окне чек-листа */
+.inspection-act {
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; margin: 10px 0;
+  min-inline-size: 0;
+}
+.inspection-act h5 {
+  margin: 0 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+}
+
+/* Своё значение в многозначном выборе: поле и кнопка одной строкой */
+.multi-select-custom { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+.multi-select-custom input { flex: 1; min-width: 0; }
+
+/*
+ * Поле с подсказками выглядит как выпадающий список.
+ *
+ * Внутри это обычный ввод со списком (`datalist`): по нему можно и выбрать
+ * готовое, и набрать своё. Но рядом с настоящими списками он читался как поле
+ * другого рода — «где-то список, где-то белый экранчик», — хотя делает то же
+ * самое и даже больше. Поэтому у него та же рамка, та же высота и та же
+ * стрелка справа.
+ */
+input[list] {
+  appearance: none;
+  padding-right: 26px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  background-size: 10px 6px;
+}
+input[list]::-webkit-calendar-picker-indicator { display: none; }
+
+/* Журнал общим списком: разделы по видам оборудования */
+/*
+ * Тело журнала занимает ровно то, что осталось от окна, — и ни точкой больше.
+ *
+ * Заказчик: «сделай, чтобы ползунок перемещения вправо и влево был всегда по
+ * нижнему краю страницы; сейчас в длинном журнале надо спуститься до самого
+ * низа, чтобы прокрутить вбок».
+ *
+ * Цепочка высот рвалась здесь. Само окно журнала — колонка с заданной высотой,
+ * но его тело было обычным блоком: высоту оно брало по содержимому, таблица на
+ * двести строк растягивала его вниз, и полоса прокрутки вбок, стоящая по низу
+ * таблицы, уезжала далеко за экран.
+ *
+ * Теперь тело — тоже колонка, и ему разрешено быть ниже содержимого
+ * (`min-height: 0`). Тогда прокручивается рамка таблицы, а не страница, и обе
+ * её полосы всегда на виду.
+ */
+.journal-body {
+  flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
+  overflow: auto; overflow-anchor: none;
+}
+.journal-sections { gap: 14px; }
+.journal-section {
+  width: max-content; min-width: 100%; display: flex; flex: 0 0 auto;
+  flex-direction: column; min-height: 0;
+}
+.journal-section-title {
+  display: flex; align-items: center; gap: 7px;
+  margin: 0 0 4px; font-size: 13px; font-weight: 600;
+  position: sticky; left: 0;
+}
+.journal-section-title img, .journal-section-title svg { width: 18px; height: 18px; }
+/* Вкладка «Все» шире прочих: у неё подпись, а не значок. */
+.group-tab-all { padding: 2px 8px; gap: 5px; }
+
+/* Название раздела журнала — вкладка: нажатие открывает весь раздел */
+button.journal-group-title {
+  background: none; border: none; padding: 0 2px; cursor: pointer;
+  font: inherit; color: var(--text-muted); text-align: left;
+}
+button.journal-group-title:hover { color: var(--text); text-decoration: underline; }
+button.journal-group-title.active { color: var(--text); font-weight: 600; text-decoration: underline; }
+
+/* Строка журнала открывает карточку объекта целиком */
+.journal-row { cursor: pointer; }
+.journal-row:hover td { background: var(--bg-elevated); }
+.journal-reg-number { font-weight: 600; }
+
+/* Проверка расстановки огнетушителей (ППР РФ № 1479, пункт 409) */
+.check-modal { width: 900px; }
+.danger { color: var(--danger); }
+.badge.ok { color: var(--ok); }
+.badge.warn { color: var(--warn); }
+.badge.danger { color: var(--danger); }
+.check-summary {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.check-summary .checkbox { margin: 0; margin-left: auto; }
+.check-body { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.check-findings { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+/* Вывод в три строки: о чём речь, что не так, по какому пункту. В одну строку
+   всё слипалось в «замечание28-10: …ППР РФ № 1479» — ни границ, ни смысла. */
+.check-findings li {
+  display: flex; flex-direction: column; gap: 2px; font-size: 13px;
+  padding: 6px 8px; border-left: 3px solid currentColor; border-radius: 4px;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+.check-finding-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.check-finding-object { font-weight: 700; color: var(--text); }
+button.check-finding-object { padding: 0; font-size: 13px; }
+.check-finding-text { color: var(--text); }
+.check-finding-foot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+
+/* Строка огнетушителя в перечне — целиком кнопка: щёлкают по ней, а не целятся
+   в номер. */
+.check-object-row {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; width: 100%;
+  padding: 5px 8px; text-align: left; background: none; border: 1px solid transparent;
+  border-radius: 6px; font-size: 13px; color: var(--text); cursor: pointer;
+}
+.check-object-row:hover { border-color: var(--accent); background: var(--bg-elevated); }
+.check-object-mark { font-weight: 700; min-width: 66px; }
+.check-object-number { color: var(--text-muted); }
+.check-severity {
+  flex: 0 0 auto; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+  border: 1px solid currentColor; border-radius: 4px; padding: 0 5px;
+}
+.check-room { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.check-room.danger { border-color: var(--danger); }
+.check-room.warn { border-color: var(--warn); }
+.check-room.ok { border-color: var(--ok); }
+.check-room-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.check-room-head strong { flex: 0 1 auto; }
+.check-room-head .badge { margin-left: auto; }
+.check-requirement {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 4px 16px; margin: 8px 0 0;
+}
+.check-requirement dt { font-size: 11px; color: var(--text-muted); }
+.check-requirement dd { margin: 0; font-size: 13px; }
+.check-objects { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+/* Строка огнетушителя и под ней — то, что с ним не так. Столбиком, а не
+   в строку: причина длинная и в одну строку с номером не встаёт. */
+.check-objects > li { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.check-object-findings { list-style: none; margin: 0 0 4px; padding: 0 8px 0 22px; display: flex; flex-direction: column; gap: 3px; }
+.check-object-findings li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 12px; }
+.check-object-findings li.danger { color: var(--danger); }
+.check-object-findings li.warn { color: var(--warn); }
+.check-object-findings li.muted { color: var(--text-muted); }
+.room-hazard { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.room-hazard .checkbox { margin: 0; align-self: end; }
+.fire-classes { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.fire-classes .checkbox { margin: 0; }
+/* Круги нормы не должны перехватывать щелчки по значкам на плане. */
+.coverage-layer { pointer-events: none; }
+
+/* Стирание лишнего с подложки и групповое выделение значков */
+.backdrop-eraser { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px; }
+.backdrop-eraser h3 { margin-top: 0; }
+.backdrop-tool-section { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px; }
+.backdrop-tool-section h4 { margin: 0 0 6px; }
+.backdrop-eraser .actions, .backdrop-eraser .eraser-tools { display: flex; flex-wrap: wrap; }
+.backdrop-eraser .actions button, .backdrop-eraser .eraser-tools button {
+  min-width: 0; max-width: 100%; white-space: normal;
+}
+.eraser-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.eraser-tools > .small { align-self: center; color: var(--text-muted); }
+/* Переключатель «только цветное»: настройка выделения, а не отдельная кнопка. */
+.check-line { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; }
+.check-line input { margin: 0; }
+.eraser-list { list-style: none; margin: 8px 0; padding: 0; font-size: 12px; color: var(--text-muted); }
+.eraser-list li { padding: 2px 0; border-bottom: 1px dashed var(--border); }
+
+/* Выделенный группой значок: пунктир, чтобы не путать со сплошной рамкой
+   открытой карточки — это разные вещи. */
+.object-marker.picked { outline: 2px dashed var(--accent); outline-offset: 3px; }
+/* Пока отмеряют отрезок, точку ставят по чертежу: значок сверху только мешал бы. */
+.object-marker.transparent { pointer-events: none; }
+/* Полоса действий над выделенным: отдельной строкой над планом. В шапке
+   она отнимала место у названия узла и сжимала его до одного слова. */
+.plan-selection-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 6px 12px; border-bottom: 1px solid var(--border); background: var(--bg-elevated);
+}
+.plan-selection-bar button { margin: 0; padding: 5px 10px; font-size: 13px; }
+/* Пока выделяют, курсор — перекрестие: обычная стрелка обещала бы перетаскивание. */
+.plan-overlay.drawing { cursor: crosshair; }
+.viewer-area.mode-draw-lasso { cursor: crosshair; }
+
+/* Склад СППЗ: две полки рядом — резерв и то, что снято в ремонт. */
+.storage-sections {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 14px 14px;
+  align-items: start;
+}
+@media (max-width: 900px) { .storage-sections { grid-template-columns: 1fr; } }
+.storage-section {
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+  min-height: 160px; background: var(--bg-panel);
+}
+.storage-section.over { border-color: var(--accent); background: var(--bg-elevated); }
+.storage-section-резерв { border-top: 3px solid var(--ok); }
+.storage-section-ремонт { border-top: 3px solid var(--warn); }
+.storage-section-head { display: flex; align-items: baseline; gap: 8px; }
+.storage-section-head h3 { margin: 0; flex: 1 1 auto; font-size: 14px; }
+.storage-section-empty { padding: 12px 0; text-align: center; }
+.storage-list li {
+  min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center; gap: 8px;
+}
+.storage-move { flex: 0 0 auto; font-size: 12px; }
+/* Выделенный группой значок — пунктиром, как на плане. */
+.storage-item.picked, .pending-item.picked { outline: 2px dashed var(--accent); outline-offset: 2px; }
+/* Отмеченная строка журнала — цветом, а не галочкой: набирают их щелчком
+   с Ctrl и Shift, и колонка галочек только отнимала ширину у граф. */
+.journal-row-picked > td { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.journal-row-picked > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.replace-ways { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.replace-ways .checkbox { margin: 0; }
+
+/* Характеристика объекта в окне проверки: по ней считается норма, пока
+   помещения не заведены. */
+.check-building {
+  border: 1px solid var(--accent); border-radius: 8px; padding: 10px 12px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.check-building h4 { margin: 0 0 4px; }
+.check-building .fire-classes { gap: 4px 10px; }
+
+/* Масштаб плана в окне проверки: из него считаются радиусы кругов. */
+.check-scale {
+  border: 1px dashed var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 10px;
+}
+.check-scale h4 { margin: 0 0 4px; }
+.check-scale .field-row { align-items: flex-end; }
+.check-scale button { flex: 0 0 auto; }
+
+/* Ссылки изготовителя в карточке: страница изделия и паспорт файлом.
+   Каждая — своей строкой вместе с адресом: адрес длинный и в общую строку
+   не встаёт, а видеть, куда ведёт ссылка, нужно до нажатия. */
+.passport-actions { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.passport-line { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.passport-line .muted { word-break: break-all; }
+
+/* Ранг тушения в карточке: он вычислен, а не введён, поэтому и показан
+   выводом, а не полем. Рядом — откуда он взялся. */
+.rank-line { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; }
+.rank-value {
+  font-weight: 800; font-size: 14px; color: var(--text-main);
+  padding: 2px 8px; border-radius: 6px; background: var(--bg-elevated);
+}
+
+/* Окно масштаба плана: три способа задать одно и то же число. */
+.scale-modal .scale-way { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px; }
+.scale-modal .scale-way h4 { margin: 0 0 4px; font-size: 14px; text-transform: none; color: var(--text); }
+.scale-modal .scale-way .field-row { align-items: end; }
+
+/* Подложки в настройках: строка на этаж, видно задан ли масштаб. */
+.backdrop-rows { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.backdrop-rows li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px;
+  padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;
+}
+.backdrop-rows li strong { min-width: 140px; }
+
+/* Масштаб под чертежом — как на бумажном плане: по центру, некрупно. */
+.plan-scale-note {
+  text-align: center; padding: 6px 12px 0; font-size: 13px; font-weight: 600;
+  color: var(--text-muted); letter-spacing: .02em;
+}
+
+/* Действия над подложкой — своей группой справа: их три, и вперемешку с
+   размерами и масштабом строка читалась как сплошной текст. */
+.backdrop-row-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-left: auto; }
+
+/* ── Вход в программу ──────────────────────────────────────────────────────
+   Одна карточка по центру пустого окна: пока не вошли, показывать нечего, и
+   любой другой элемент на экране только отвлекал бы от единственного дела. */
+.sign-in-screen {
+  height: calc(100vh - var(--window-titlebar-height)); display: flex; align-items: center; justify-content: center;
+  background: var(--bg); padding: 20px;
+}
+.sign-in-card {
+  width: min(380px, 100%); display: flex; flex-direction: column; gap: 12px;
+  padding: 22px 24px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--bg-panel); box-shadow: var(--shadow);
+  /* Карточка входа никогда не является зоной перетаскивания окна: все её
+     поля обязаны принимать щелчок и клавиатурный фокус. */
+  -webkit-app-region: no-drag;
+}
+.sign-in-card input, .sign-in-card textarea { pointer-events: auto; user-select: text; cursor: text; }
+.sign-in-card .brand { margin-bottom: 4px; }
+.sign-in-card .field { margin: 0; }
+.sign-in-card button.primary { margin-top: 4px; padding: 9px 14px; font-size: 14px; }
+.sign-in-error { margin: 0; color: var(--danger); font-size: 13px; }
+
+/* Кто вошёл — в шапке, рядом с выходом: на общем компьютере это первое, что
+   проверяют перед тем, как что-то подписать. */
+.account-button {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 220px;
+  padding: 5px 10px; font-size: 12px; background: none; border: 1px solid transparent;
+  border-radius: 6px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.account-button:hover { border-color: var(--border); }
+
+/* ── Личный кабинет ── */
+.account-modal { width: min(560px, calc(100vw - 40px)); }
+.account-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px 16px; margin: 4px 0 8px; }
+.account-facts dt { font-size: 11px; color: var(--text-muted); }
+.account-facts dd { margin: 0; font-size: 13px; }
+
+/* ── Пользователи в настройках ── */
+.users-list { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.users-list li { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.users-list li.archived { opacity: .6; }
+.user-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.user-head select { width: auto; padding: 3px 8px; font-size: 12px; }
+/*
+ * Область прав показана деревом, а не строкой галочек вперемешку.
+ *
+ * Прежде это был «flex-wrap»: узлы шли слева направо и переносились по ширине,
+ * и по такому ряду не видно, что во что входит. Теперь строки идут сверху вниз
+ * с отступом по глубине — так же, как в дереве объекта.
+ */
+.user-scope {
+  display: flex; flex-direction: column; gap: 1px; margin: 6px 0 0;
+  max-height: 320px; overflow: auto;
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px;
+}
+.user-scope .checkbox { margin: 0; font-size: 12px; }
+.scope-row { display: flex; align-items: center; gap: 4px; min-height: 22px; }
+.scope-row:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.scope-check { flex: 1 1 auto; min-width: 0; }
+/* Разворот — той же ширины, что и пустышка на его месте: без этого строки
+   разных уровней разъезжались бы по левому краю. */
+.scope-toggle {
+  flex: 0 0 auto; width: 18px; height: 18px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg-panel); color: var(--text-muted); cursor: pointer;
+  font-size: 12px; line-height: 1;
+}
+.scope-toggle-blank { border-color: transparent; background: none; cursor: default; }
+.user-actions { display: flex; gap: 12px; margin-top: 6px; }
+.user-add { border: 1px dashed var(--border); border-radius: 8px; padding: 10px; margin: 8px 0; }
+
+/* Выход из тупика на экране входа. Обведён и отделён: это редкое действие с
+   последствиями, и попасть в него случайно не должно быть легко. */
+.sign-in-stuck {
+  border: 1px solid var(--warn); border-radius: 8px; padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.sign-in-stuck p { margin: 0; }
+.sign-in-stuck .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+/* Перо: цвет и толщина рядом с кнопками — их меняют чаще, чем инструмент. */
+.pen-color { width: 34px; height: 28px; padding: 2px; border: 1px solid var(--border); border-radius: 6px; background: none; }
+.pen-width { display: inline-flex; align-items: center; gap: 6px; }
+.pen-width input[type="range"] { width: 96px; }
+
+/* Графы сведений карточки.
+
+   Остальные графы журнала короткие, и запрет переноса им на пользу: «исправен»
+   или дата не должны рваться пополам. А «данные карточки огнетушителя» — это
+   фраза, и в неразрывной строке она растягивала таблицу на пол-экрана, уводя
+   проверки за правый край.
+
+   Здесь перенос разрешён, а ширина ограничена: текст ложится в два-три ряда,
+   и всё остальное остаётся на виду. */
+.journal-table th.journal-card-col,
+.journal-table td.journal-card-col {
+  white-space: normal;
+  min-width: 150px;
+  max-width: 260px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* Выбор разделов переносимого журнала: непригодный лист виден сразу. */
+.import-sheets li { padding: 3px 0; }
+.import-sheets .checkbox { display: flex; align-items: center; gap: 8px; }
+.import-sheet-name { font-weight: 600; }
+.import-sheet-skipped { opacity: .75; }
+.import-sheets-skipped {
+  border: 1px solid var(--warn); border-radius: 8px; padding: 8px 10px; margin: 6px 0;
+}
+
+/* Водяных знаков в программе нет.
+
+   Их просил заказчик, их же он и отменил: «убери эти дурацкие водяные знаки,
+   чтобы их не было». Знак на фоне пустой страницы мешал читать сообщение и
+   ничего не сообщал сам — рабочей пользы у него не было никакой.
+
+   Отменена вся отрисовка целиком, а не убавлена заметность: полупрозрачный
+   узор, который «почти не видно», — это тот же узор, только спорить с ним
+   труднее. Место под знак в коробке сообщения тоже убрано: без знака оно
+   оставляло бы пустую полосу справа. */
+
+/* ── Панели разведены заметнее ────────────────────────────────────────────
+   Заказчик: «нужно, чтобы окна правое, центральное и левое были более заметно
+   выделены друг относительно друга (но не сильно)».
+
+   Разводит не цвет, а глубина: у боковых панелей своя подложка и мягкая тень
+   на границе с рабочей областью. Цветом их разделять нельзя — на плане и в
+   журнале цвет уже занят состоянием оборудования. */
+.sidebar {
+  box-shadow: 1px 0 0 var(--border), 6px 0 18px -12px rgba(0, 0, 0, .45);
+  z-index: 2;
+}
+.workspace { position: relative; }
+[data-theme='light'] .sidebar {
+  box-shadow: 1px 0 0 var(--border), 6px 0 16px -12px rgba(15, 23, 42, .22);
+}
+.inspector {
+  box-shadow: -1px 0 0 var(--border), -6px 0 18px -12px rgba(0, 0, 0, .45);
+  z-index: 2;
+}
+[data-theme='light'] .inspector {
+  box-shadow: -1px 0 0 var(--border), -6px 0 16px -12px rgba(15, 23, 42, .22);
+}
+
+/* ── Карточка узла ────────────────────────────────────────────────────────
+   Шапка отвечает на вопрос «чью карточку я правлю» до того, как его успеешь
+   задать. Раньше здесь стоял общий заголовок «Карточка узла», и при переходе
+   по дереву с первого взгляда было не понять, что перед тобой. */
+.node-card-head {
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.node-card-mark {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 800; font-size: 16px;
+}
+.node-card-titles { min-width: 0; flex: 1 1 auto; }
+.node-card-name {
+  font-size: 16px; font-weight: 700; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.node-card-kind {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted);
+}
+/* Путь идёт в штамп печатного плана, поэтому показан целиком, с переносом. */
+.node-card-path {
+  margin: 0 0 12px; font-size: 12px; color: var(--text-muted); line-height: 1.4;
+}
+.node-card-block + .node-card-block { margin-top: 14px; }
+.node-card-block h4 {
+  margin: 0 0 8px; font-size: 11px; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--text-muted);
+}
+/* Подвал карточки: вне прокручиваемого тела, поэтому виден всегда сам собой. */
+.node-card-save {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+}
+.node-card-save button { flex: 0 0 auto; }
+
+
+/* Конструктор своих видов элементов (движок E4) */
+.custom-types > li {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 6px 0; border-top: 1px solid var(--border);
+}
+.custom-type-actions { margin-left: auto; display: flex; gap: 12px; }
+
+.custom-element-editor { display: flex; flex-direction: column; gap: 10px; }
+.custom-element-title { flex: 1 1 240px; }
+.custom-element-mark { flex: 0 0 140px; }
+.custom-field-kind { flex: 0 0 160px; }
+.custom-field-unit { flex: 0 0 100px; }
+
+.custom-icon-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* Поле выбора файла спрятано: его вид не настраивается, а подпись у ссылки
+   говорит понятнее, чем «Файл не выбран». */
+.custom-icon-pick { cursor: pointer; }
+.custom-icon-pick input[type="file"] { display: none; }
+
+.custom-checks > li { padding: 10px 0; border-top: 1px solid var(--border); }
+.custom-check-every { flex: 0 0 90px; }
+.custom-check-unit { flex: 0 0 110px; }
+.custom-works { margin-top: 6px; padding-left: 12px; border-left: 2px solid var(--border); }
+.custom-work-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.custom-work-row input { flex: 1; }
+
+.custom-color-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.custom-color {
+  width: 22px; height: 22px; border-radius: 5px; padding: 0;
+  border: 2px solid transparent; cursor: pointer;
+}
+.custom-color.active { border-color: var(--text); }
+.custom-mark-preview { margin-left: 10px; }
+
+.custom-placements { display: flex; gap: 14px; flex-wrap: wrap; }
+.custom-placements .checkbox { margin: 0; }
+
+/* Кнопки формы не растягиваются на всю ширину колонки. */
+.custom-element-editor > button { align-self: flex-start; }
+
+.custom-fields > li {
+  padding: 8px 0; border-top: 1px solid var(--border);
+}
+
+/* Поля своего вида в карточке элемента */
+.custom-fields-section {
+  border-top: 1px solid var(--border); margin-top: 10px; padding-top: 8px;
+}
+.custom-fields-section h5 { margin: 0 0 6px; }
+
+/* Перенос журнала: раздел слева, наш вид справа */
+.import-match {
+  display: flex; align-items: flex-start; gap: 14px; flex-wrap: wrap;
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;
+  background: var(--bg-elevated);
+}
+.import-match-side { flex: 1 1 240px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.import-match-arrow { align-self: center; color: var(--text-muted); font-size: 18px; }
+.import-match-pick { display: flex; align-items: center; gap: 8px; }
+.import-match-pick select { flex: 1; min-width: 0; }
+
+/* Выгрузка карточки: подпись, список формата и одна кнопка */
+.card-export-actions select { width: auto; min-width: 120px; }
+
+/* Строка подложки: название узла и путь к нему под ним */
+.backdrop-row-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 200px; }
+
+/* Пользователи: строка доступа и пометка состояния входа */
+.user-scope-line { margin: 2px 0 6px; }
+.badge.ok { color: var(--ok); }
+
+/* Колокольчик: счётчик на значке и список того, что ждёт действий */
+.icon-button { position: relative; }
+.bell-count {
+  position: absolute; top: 0; right: 0; min-width: 15px; height: 15px; padding: 0 3px;
+  border-radius: 8px; background: var(--danger); color: #fff;
+  font-size: 10px; line-height: 15px; font-weight: 700; text-align: center;
+}
+.notifications-menu { min-width: 260px; padding: 6px; }
+.notifications-menu > button { display: flex; justify-content: space-between; gap: 14px; }
+.notifications-menu > p { margin: 6px 8px; }
+
+/* Значки встроенных систем в настройках */
+.element-icons > li {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0; border-top: 1px solid var(--border);
+}
+.element-icons-title { flex: 1; min-width: 0; }
+.element-icons-actions { display: flex; gap: 12px; flex-shrink: 0; }
+/*
+ * Значок и кнопка замены — одним столбиком и одной ширины.
+ *
+ * Ширина задана значку: подпись «заменить» под ним не должна растягивать
+ * столбик, иначе ряд видов пойдёт лесенкой.
+ */
+.element-icons-slot {
+  flex: 0 0 auto; width: 56px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.element-icons-slot .link { font-size: 11px; }
+
+/* Свой круг на каждый вид оборудования */
+.dash-kinds { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.dash-kind { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.dash-kind-title { display: flex; align-items: center; gap: 6px; max-width: 100%; }
+.dash-kind-title span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-kind-legend { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+/* Соглашения при первом входе */
+.legal-screen {
+  min-height: calc(100vh - var(--window-titlebar-height)); display: flex; align-items: center; justify-content: center;
+  background: var(--bg); padding: 20px;
+}
+.legal-card {
+  width: min(760px, 100%); max-height: 92vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 20px 24px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--bg-panel); box-shadow: var(--shadow);
+}
+.legal-document { display: flex; flex-direction: column; gap: 8px; }
+/* Текст прокручивается своим полем: так видно, что его надо дочитать. */
+.legal-text {
+  max-height: 220px; overflow-y: auto; white-space: pre-wrap;
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+  background: var(--bg-elevated); font-size: 12px; line-height: 1.5;
+}
+
+.legal-details { margin: 6px 0; }
+.legal-details summary { cursor: pointer; font-size: 13px; }
+.legal-details .legal-text { margin-top: 6px; }
+
+/* Подпись над чертежом в редакторе подложки: кнопок масштаба справа нет */
+.viewer-title { max-width: 100%; }
+
+/* ========================================================================
+   Утверждённая дизайн-система: «Холодная сталь и глубокий петрол»
+   Источник: docs/07_Утверждённый_дизайн_файл.md
+   ======================================================================== */
+
+/* Рабочая область отличается от оболочки, а данные лежат на белых панелях. */
+.workspace,
+.mode-panel,
+.center-body,
+.dashboard-panel,
+.journal { background: var(--workspace-bg); }
+
+.sidebar,
+.inspector,
+.modal,
+.panel,
+.dash-card,
+.tile,
+.journal-table,
+.journal-table-wrap,
+.settings-section,
+.service-box,
+.node-sheet,
+.context-menu,
+.picker-list,
+.combo-list { background-color: var(--bg-panel); }
+
+/* В проекте используются только два визуальных веса IBM Plex Sans. */
+b,
+strong,
+h1,
+h2,
+h3,
+h4,
+h5,
+button,
+.brand-mark,
+.tile-value,
+.service-count,
+.node-card-name { font-weight: 500; }
+
+/* Геометрия компактная и техническая, без крупных «мобильных» скруглений. */
+.mode-tab,
+.journal-table-wrap,
+.modal,
+.dash-card,
+.tile,
+.settings-section,
+.service-box,
+.node-sheet,
+.context-menu,
+.picker-list,
+.combo-list,
+.legal-card,
+.journal-group,
+.journal-whole { border-radius: 5px; }
+
+/* Вкладки режимов различимы цветом, но не превращаются в цветные кнопки. */
+.mode-tabs {
+  background: var(--header-bg);
+  padding-top: 7px;
+}
+.mode-tab {
+  background: color-mix(in srgb, var(--bg-panel) 62%, var(--header-bg));
+  border-radius: 5px 5px 0 0;
+}
+.mode-tab:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--tab-color) 8%, var(--bg-panel));
+  border-color: color-mix(in srgb, var(--tab-color) 42%, var(--border));
+}
+.mode-tab.active {
+  background: var(--workspace-bg);
+  border-bottom-color: var(--workspace-bg);
+  font-weight: 500;
+}
+.mode-tab.active::before {
+  left: 5px;
+  right: 5px;
+  border-radius: 3px 3px 0 0;
+}
+
+/* Три семейства систем имеют собственный спокойный цвет. */
+.journal-group.group-outside { --journal-group-color: var(--group-outside); }
+.journal-group.group-inside { --journal-group-color: var(--group-inside); }
+.journal-group.group-automation { --journal-group-color: var(--group-automation); }
+.journal-group.active {
+  border-color: var(--journal-group-color);
+  background: color-mix(in srgb, var(--journal-group-color) 8%, var(--bg-panel));
+}
+.journal-group.active > .journal-group-title {
+  color: var(--journal-group-color);
+  font-weight: 500;
+}
+.journal-group .group-tab.active {
+  color: var(--text);
+  font-weight: 500;
+  background: color-mix(in srgb, var(--journal-group-color) 14%, var(--bg-panel));
+  border-color: var(--journal-group-color);
+  box-shadow: inset 0 -2px 0 var(--journal-group-color);
+}
+.journal-group .group-tab.active .muted {
+  color: color-mix(in srgb, var(--journal-group-color) 58%, var(--text));
+}
+.journal-whole.active {
+  color: var(--text);
+  font-weight: 500;
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-panel));
+  border-color: var(--accent);
+}
+
+/* Таблица остаётся строгой; выбор заметнее наведения, шапка закреплена. */
+.journal-table th {
+  background: color-mix(in srgb, var(--bg-elevated) 74%, var(--bg-panel));
+  color: var(--text);
+  font-weight: 500;
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+.journal-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg-panel));
+}
+/*
+ * Отмеченные строки журнала залиты цветом все и всегда.
+ *
+ * Заказчик: «когда в журнале выделяешь несколько объектов, они все должны
+ * закрашиваться заливкой, как когда выбран один». Так и было задумано, но
+ * заливку сбивало наведение: правило подсветки строки под курсором стояло
+ * сильнее правила отметки, и та строка, по которой человек как раз вёл мышью,
+ * оказывалась незакрашенной. Набирают строки именно мышью — значит, ровно
+ * последняя отмеченная и выглядела неотмеченной.
+ *
+ * Поэтому отметка объявлена вместе с наведением и весом не ниже: цвет отметки
+ * важнее подсветки «вот эта строка под курсором».
+ */
+.journal-table tbody tr.journal-row-picked > td,
+.journal-table tbody tr.journal-row-picked:hover > td {
+  background: color-mix(in srgb, var(--accent) 20%, var(--bg-panel));
+}
+.journal-table tbody tr.journal-row-picked > td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Светофор остаётся смысловым и не смешивается с цветами разделов. */
+.status-unknown .status-dot,
+.status-filter-unknown .status-dot { background: var(--unknown); }
+.status-unknown,
+.technical-state-unknown { color: var(--unknown); }
+
+/* Заблокированное состояние остаётся читаемым, но не выглядит активным. */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: .58;
+  cursor: not-allowed;
+  filter: saturate(.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* Найденная по «показать на плане» единица склада мигает так же, как значок
+   на поэтажном плане: подсветка одна и та же, где бы предмет ни лежал. */
+.storage-item.selected { outline: 3px solid #111827; outline-offset: 1px; }
+.storage-item.flash { animation: storage-item-pulse .55s ease-in-out 3; }
+@keyframes storage-item-pulse {
+  0%, 100% { box-shadow: none; }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, #facc15 70%, transparent); }
+}
+
+/* Графы приложения № 1 под основанием требования */
+.check-printed { margin: 4px 0 0; }
+.check-printed > li { margin: 1px 0; }
+
+/* ── Выбор вида оборудования: список со значками ──────────────────────────
+   Заказчик: «в правой графе выпадающим списком наши системы, разбитые также по
+   разделам и значками». Обычный список этого не умеет — в его строке нельзя
+   показать картинку, а значок здесь половина узнавания. */
+.type-picker { position: relative; }
+.type-picker-button {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  padding: 6px 10px; background: var(--bg-elevated); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.type-picker-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.type-picker-arrow { color: var(--text-muted); }
+.type-picker-list {
+  position: absolute; z-index: 40; top: calc(100% + 4px); left: 0; right: 0;
+  max-height: 320px; overflow-y: auto; padding: 6px;
+  background: var(--bg-panel); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow);
+}
+.type-picker-list h5 {
+  margin: 8px 6px 4px; font-size: 11px; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--text-muted);
+}
+.type-picker-list section:first-child h5 { margin-top: 2px; }
+.type-picker-item {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  padding: 5px 6px; border: 0; border-radius: 6px; background: transparent; color: inherit;
+}
+.type-picker-item:hover { background: var(--bg-elevated); }
+.type-picker-item.selected { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+
+/* ── Кто выполнял работы: выбор из двух ───────────────────────────────────
+   Заказчик: «галочка "выполнено сторонней организацией" и графа с ФИО как бы в
+   одном блоке; нужно, чтобы это визуально разделялось — либо-либо». */
+.evidence-switch { display: flex; gap: 0; margin-bottom: 10px; }
+.evidence-choice {
+  flex: 1; padding: 7px 12px; border: 1px solid var(--border); background: var(--bg-elevated);
+  color: var(--text-muted);
+}
+.evidence-choice:first-child { border-radius: 8px 0 0 8px; }
+.evidence-choice:last-child { border-radius: 0 8px 8px 0; border-left: 0; }
+.evidence-choice.selected {
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg-elevated));
+  border-color: var(--accent); color: var(--text); font-weight: 600;
+}
+.evidence-block {
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+
+/* Подложки сгруппированы по полному пути. Сам план лежит отдельной строкой
+   ниже пути, поэтому «Здание» больше не повторяется как заголовок и план. */
+.backdrop-tree > .backdrop-tree-group {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg-elevated) 45%, var(--bg-panel));
+}
+.backdrop-tree-path {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 5px;
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg-panel));
+}
+.backdrop-tree-path strong,
+.backdrop-tree .backdrop-tree-plan strong { min-width: 0; }
+.backdrop-path-part { display: inline-flex; align-items: center; min-width: 0; gap: 5px; }
+.backdrop-path-part span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.backdrop-path-arrow { color: var(--accent); font-size: 17px; line-height: 1; }
+.backdrop-path-current { color: var(--text); font-weight: 600; }
+.backdrop-tree-plans { list-style: none; margin: 0; padding: 5px 6px 5px 25px; }
+.backdrop-tree .backdrop-tree-plans > .backdrop-tree-plan {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 7px 8px 7px 15px;
+  border: 0;
+  border-left: 2px solid color-mix(in srgb, var(--tab-plan) 55%, var(--border));
+  border-radius: 0;
+  background: var(--bg-panel);
+}
+.backdrop-tree .backdrop-row-name {
+  flex-direction: row;
+  align-items: center;
+}
+.backdrop-tree .backdrop-tree-plans > .backdrop-tree-plan + .backdrop-tree-plan {
+  border-top: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+}
+.backdrop-tree-icon {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  flex: 0 0 22px;
+  margin-right: 7px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1;
+}
+.backdrop-tree-icon-node {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.backdrop-tree-icon-plan {
+  color: var(--tab-plan);
+  background: color-mix(in srgb, var(--tab-plan) 12%, transparent);
+}
+.backdrop-tree .backdrop-tree-plan::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tab-plan);
+  box-shadow: 0 0 0 2px var(--bg-panel);
+  transform: translateY(-50%);
+}
+
+/* Стандартные поля карточки в конструкторе своего вида: перечень, а не форма. */
+.standard-fields { list-style: none; margin: 6px 0 14px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 4px 16px; }
+.standard-fields li { display: flex; gap: 8px; align-items: baseline; border-bottom: 1px dotted var(--border); padding: 3px 0; }
+.standard-fields li > span:first-child { flex: 0 0 auto; }
+.standard-fields li > span:last-child { flex: 1; text-align: right; }
+
+/* Блок «Скоро ТО»: три подблока рядом. */
+.service-horizons { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.service-box { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--bg-elevated); }
+.service-box header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.service-count { font-size: 26px; font-weight: 800; line-height: 1; }
+.service-title { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+.service-danger { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
+.service-danger .service-count { color: var(--danger); }
+.service-warn { border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); }
+.service-warn .service-count { color: var(--warn); }
+.service-box .plain-list { display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+.dash-kind-share { opacity: .8; }
+
+/* Графа простой электронной подписи в журнале. */
+.journal-sign-col { width: 190px; max-width: 190px; }
+.journal-signed,
+.journal-signature-button {
+  padding: 3px 7px;
+  white-space: nowrap;
+  background: transparent;
+  border-color: currentColor;
+}
+.journal-signed {
+  display: inline-flex; flex-direction: column; align-items: flex-start;
+  width: 100%; max-width: 100%; min-width: 0; overflow: hidden;
+  color: var(--ok); text-align: left; line-height: 1.25;
+}
+.journal-signature-name {
+  display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.journal-signature-date { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+.journal-signature-button.unsigned { color: var(--accent); border-style: dashed; }
+/*
+ * Подпись под заведением строки в журнал показывается, но не открывается:
+ * записи журнала за ней нет — подписано само появление строки. Поэтому не
+ * кнопка и без подсветки под курсором: обещать нажатие, которого не будет,
+ * хуже, чем не обещать ничего.
+ */
+span.journal-signed { cursor: default; }
+span.journal-signed:hover { color: var(--ok); background: transparent; }
+.journal-signed:hover:not(:disabled),
+.journal-signature-button:hover:not(:disabled) {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.maintenance-signature-modal { width: min(560px, calc(100vw - 40px)); }
+.sign-password-modal { width: min(460px, calc(100vw - 40px)); }
+.maintenance-signature-modal .facts { margin: 8px 0 14px; }
+.signature-summary,
+.signature-verdict {
+  padding: 9px 11px;
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--bg-panel));
+}
+.signature-verdict.signature-error,
+.signature-inline-error {
+  display: flex; align-items: center; gap: 7px; color: var(--danger);
+  border-color: var(--danger); background: color-mix(in srgb, var(--danger) 9%, var(--bg-panel));
+}
+.signature-inline-error { margin: 7px 0 0; padding: 7px 9px; border-left: 3px solid var(--danger); font-size: 12px; }
+.signature-error-icon {
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 18px;
+  width: 18px; height: 18px; border-radius: 50%; background: var(--danger); color: #fff;
+  font-size: 12px; font-weight: 800;
+}
+.signature-password-field.invalid input,
+.sign-block input[aria-invalid='true'] { border-color: var(--danger); box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 20%, transparent); }
+.sign-block { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 10px 0; background: color-mix(in srgb, var(--accent) 5%, transparent); }
+
+/* История действий в личном кабинете. */
+.audit-table td { padding: 5px 8px; }
+/*
+ * История действий укладывается в ширину окна.
+ *
+ * Заказчик: «колонка „что изменилось“ не помещается в границы окна без
+ * прокрутки вбок». Таблица журнала запрещает перенос строк — там это верно, у
+ * граф своя ширина и они узкие. Здесь наоборот: «что изменилось» — фраза, и её
+ * место в двух строках, а не за краем экрана.
+ *
+ * Ширины заданы долями, чтобы длинная фраза не выдавливала «когда» и «кто».
+ */
+.audit-table { table-layout: fixed; width: 100%; }
+.audit-table th, .audit-table td { white-space: normal; overflow-wrap: anywhere; }
+.audit-table th:nth-child(1), .audit-table td:nth-child(1) { width: 13%; }
+.audit-table th:nth-child(2), .audit-table td:nth-child(2) { width: 17%; }
+.audit-table th:nth-child(3), .audit-table td:nth-child(3) { width: 20%; }
+.audit-table th:nth-child(4), .audit-table td:nth-child(4) { width: 22%; }
+.audit-table th:nth-child(5), .audit-table td:nth-child(5) { width: 28%; }
+.audit-table tr.audit-danger td { background: color-mix(in srgb, var(--danger) 10%, transparent); }
+.audit-table tr.audit-ok td { background: color-mix(in srgb, var(--ok) 8%, transparent); }
+.account-modal {
+  width: min(980px, calc(100vw - 40px));
+  height: min(760px, 88vh);
+}
+
+/* Выбор объектов для заявки: список узлов с отступами по вложенности. */
+.request-nodes { max-height: 240px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; }
+.request-node { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+
+/* Раскрытая категория уведомлений: список того, что стоит за числом. */
+.notification-group { display: flex; flex-direction: column; }
+.notification-line { display: flex; justify-content: space-between; gap: 10px; padding-left: 18px !important; font-size: 12px; }
+.picker-group { margin: 6px 6px 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+/* Список в строке действий не растягивается на всю ширину. */
+.card-export-actions .picker-box { flex: 0 0 auto; min-width: 130px; }
+
+
+/*
+ * Нижняя панель карточки узла.
+ *
+ * Заказчик: «нижняя панель должна нормально выезжать снизу экрана и иметь
+ * полноценную разметку… исключить наложение элементов… обеспечить прокрутку…
+ * корректно работать при разных размерах окна приложения».
+ *
+ * Панель лежит поверх рабочей области во всю её ширину, а не внутри левого
+ * поля: там на карточку приходилось 340 px, и восемнадцать полей здания
+ * вставали в один узкий столбик.
+ *
+ * Высота задана долей окна с ограничениями снизу и сверху: на ноутбуке панель
+ * не съедает экран целиком, на большом мониторе не превращается в полоску.
+ */
+/*
+ * Карточка узла занимает левое поле целиком — «до самого верха».
+ *
+ * Делить колонку в 340 точек между деревом и карточкой не выходит: у здания в
+ * карточке восемнадцать полей, и на половине колонки они сминаются в столбик.
+ * Пока карточку правят, дерево не нужно; закрыл — дерево снова на месте.
+ */
+/*
+ * Карточка узла занимает левое поле целиком.
+ *
+ * Обычным блоком, а не панелью поверх: у поля свои внутренние отступы и своя
+ * прокрутка, и наложенная поверх панель отсчитывалась от них, а не от края.
+ */
+.sidebar-card { padding: 0; overflow: hidden; }
+.node-sheet {
+  /* Общий отступ разделов здесь ни к чему: карточка и есть всё поле. */
+  margin: 0;
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column;
+  padding: 12px 14px;
+  animation: node-sheet-rise .16s ease-out;
+}
+
+/*
+ * Выезжает снизу — движение объясняет, откуда взялась панель.
+ *
+ * Смещение задано отступом, а не `transform`: элемент, у которого сдвигается
+ * `transform`, становится точкой отсчёта для всего, что внутри него стоит
+ * `position: fixed`. Раскрытые списки полей отсчитываются от окна, и с
+ * `transform` они уезжали бы вниз на высоту панели.
+ */
+/* Выезжает снизу: движение объясняет, откуда взялась карточка. */
+@keyframes node-sheet-rise {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Карточка занимает панель целиком: шапка, прокручиваемое тело, подвал. */
+.node-sheet .node-card { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.node-card-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 10px; }
+/*
+ * Поля раскладываются по ширине сами: столько столбцов, сколько влезает
+ * колонок по 230 px. Заголовки, пояснения и вложенные списки занимают строку
+ * целиком — иначе подпись раздела встала бы сбоку от первого поля.
+ */
+/*
+ * Столько столбцов, сколько влезает колонок по 210 точек. В левом поле это
+ * почти всегда один — и это верно: поле узкое, а поля карточки длинные.
+ * Правило оставлено общим на случай, если поле когда-нибудь расширят.
+ */
+.node-sheet .node-card-block,
+.node-sheet .profile-form {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0 14px; align-items: start;
+}
+.node-sheet .node-card-block > *,
+.node-sheet .profile-form > * { grid-column: 1 / -1; min-width: 0; }
+.node-sheet .node-card-block > .field,
+.node-sheet .profile-form > .field { grid-column: auto; }
+
+/*
+ * Раскрытый список общего поля выбора нарисован поверх страницы.
+ *
+ * Внутри поля его срезала прокрутка карточки: у нижних полей было видно
+ * половину списка. Положение считает `useAnchoredMenu` — он же раскрывает
+ * список вверх, когда под полем места нет.
+ */
+.picker-list.floating,
+.combo-list.floating {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: auto;
+  z-index: 90;
+}
+
+/* Компоненты, добавленные ниже основного блока дизайн-системы, сохраняют ту
+   же компактную геометрию и фон полей. */
+.sign-in-card,
+.type-picker-list,
+.evidence-block,
+.service-box,
+.sign-block,
+.request-nodes { border-radius: 6px; }
+
+.type-picker-button { background: var(--field-bg); border-radius: 5px; }
+.type-picker-item,
+.evidence-choice { border-radius: 5px; }
+
+::selection {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+* {
+  scrollbar-color: color-mix(in srgb, var(--accent) 45%, var(--border)) transparent;
+}
+
+/* ── Контрастная редакция журнала ───────────────────────────────────────
+   У журнала собственная композиция поверх общих токенов: светлые карточки
+   отделены от молочно-серого поля, а в тёмной теме границы и подписи не
+   растворяются в фоне. */
+.journal-groups { gap: 10px; margin-bottom: 12px; }
+.journal-group {
+  padding: 9px 10px 10px;
+  border-top-width: 4px;
+  background: var(--bg-panel);
+  box-shadow: 0 2px 8px rgb(17 30 34 / .07);
+}
+.journal-group.active {
+  background: color-mix(in srgb, var(--journal-group-color) 13%, var(--bg-panel));
+  box-shadow: 0 0 0 1px var(--journal-group-color), 0 3px 10px rgb(17 30 34 / .1);
+}
+.journal-group-title { color: var(--text-muted); font-weight: 500; }
+.journal-group .group-tab {
+  min-height: 29px;
+  background: color-mix(in srgb, var(--bg-elevated) 76%, var(--bg-panel));
+}
+.journal-group .group-tab:hover:not(:disabled) {
+  border-color: var(--journal-group-color);
+  background: color-mix(in srgb, var(--journal-group-color) 10%, var(--bg-panel));
+}
+.journal-group .group-tab.active {
+  background: color-mix(in srgb, var(--journal-group-color) 22%, var(--bg-panel));
+  box-shadow: inset 0 -3px 0 var(--journal-group-color);
+}
+
+.journal-toolbar {
+  gap: 18px;
+  padding: 9px 10px;
+  margin-bottom: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.journal-export { gap: 12px; }
+.journal-export button {
+  min-height: 36px;
+  padding: 7px 15px;
+  letter-spacing: .01em;
+}
+.journal-export button.primary {
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / .2), 0 2px 7px rgb(26 70 88 / .18);
+}
+.journal-export button.success {
+  background: color-mix(in srgb, var(--action-import) 9%, var(--bg-panel));
+  border: 2px solid var(--action-import);
+  color: var(--action-import-text);
+  box-shadow: none;
+}
+.journal-export button.success:hover:not(:disabled) {
+  background: var(--action-import-hover);
+  border-color: var(--action-import-hover);
+  color: var(--action-import-on-fill);
+}
+.journal-table-wrap {
+  border-color: var(--border);
+  box-shadow: 0 3px 12px rgb(17 30 34 / .08);
+}
+.journal-table th {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+  border-bottom: 2px solid color-mix(in srgb, var(--accent) 48%, var(--border));
+}
+.journal-table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--bg-elevated) 48%, var(--bg-panel));
+}
+.journal-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--accent) 11%, var(--bg-panel));
+}
+
+.mode-tab.active {
+  border-color: color-mix(in srgb, var(--tab-color) 70%, var(--border));
+  border-bottom-color: var(--workspace-bg);
+  background: color-mix(in srgb, var(--tab-color) 11%, var(--workspace-bg));
+}
+
+[data-theme='dark'] .journal-group,
+[data-theme='dark'] .journal-toolbar,
+[data-theme='dark'] .journal-table-wrap {
+  box-shadow: 0 3px 12px rgb(0 0 0 / .24);
+}
+
+/*
+ * Строка истории, ведущая к первоисточнику.
+ *
+ * Кнопка, а не ссылка: переход происходит внутри программы, адреса у него
+ * нет. Выглядит ссылкой намеренно — по виду и понятно, что по ней идут.
+ */
+/*
+ * Строка истории, ведущая к первоисточнику.
+ *
+ * Ведёт вся строка, а не слово в ней: заказчик просил «пусть будет кликабельна
+ * сама строка». Поэтому у неё курсор указателя и подсветка при наведении — по
+ * ним и понятно, что строка нажимается.
+ */
+.audit-row-link { cursor: pointer; }
+.audit-row-link:hover td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.audit-row-link:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.audit-subject { color: var(--accent); }
+
+.link-button {
+  background: none; border: none; padding: 0; font: inherit; text-align: left;
+  color: var(--accent); text-decoration: underline; text-underline-offset: 2px;
+}
+.link-button:hover { color: var(--text); }
+
+/* Отборы над лентой истории: они не должны занимать всю ширину окна. */
+.audit-filters { max-width: 620px; margin-bottom: 10px; }
+
+/* ── Повышенный контраст состояний и уведомлений ─────────────────────────
+   Статус должен находиться боковым зрением: цветная точка усилена спокойной
+   заливкой, рамкой и свечением. Текст и форма дублируют цветовой сигнал. */
+.object-type[data-condition] {
+  padding: 8px 10px;
+  border-left-width: 5px;
+  border-radius: 5px;
+}
+.object-type[data-condition='ok'] {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 19%, transparent), transparent 72%);
+}
+.object-type[data-condition='warn'] {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--warn) 22%, transparent), transparent 72%);
+}
+.object-type[data-condition='danger'] {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--danger) 23%, transparent), transparent 72%);
+}
+.object-type[data-condition='unknown'] {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--unknown) 14%, transparent), transparent 72%);
+}
+
+.status-pill,
+.status-row,
+.status-cell,
+.technical-state,
+.due-badge,
+.badge { font-weight: 500; }
+
+.status-pill.status-ok,
+.status-row.status-ok,
+.status-cell.status-ok,
+.technical-state-ok,
+.badge.ok {
+  color: var(--ok);
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 16%, var(--bg-panel));
+}
+.status-pill.status-warn,
+.status-row.status-warn,
+.status-cell.status-warn,
+.badge.warn {
+  color: var(--warn);
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 17%, var(--bg-panel));
+}
+.status-pill.status-danger,
+.status-row.status-danger,
+.status-cell.status-danger,
+.technical-state-danger,
+.badge.danger,
+.badge.error {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 17%, var(--bg-panel));
+}
+.status-pill.status-unknown,
+.status-row.status-unknown,
+.status-cell.status-unknown,
+.technical-state-unknown {
+  color: var(--unknown);
+  border-color: var(--unknown);
+  background: color-mix(in srgb, var(--unknown) 10%, var(--bg-panel));
+}
+.status-pill .status-dot,
+.status-row .status-dot,
+.status-cell .status-dot {
+  width: 10px;
+  height: 10px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 24%, transparent), 0 0 8px currentColor;
+}
+.due-badge { padding: 2px 7px; border-radius: 4px; }
+.due-ok { background: color-mix(in srgb, var(--ok) 15%, transparent); }
+.due-soon { background: color-mix(in srgb, var(--warn) 17%, transparent); }
+.due-late { background: color-mix(in srgb, var(--danger) 18%, transparent); }
+.due-dot { width: 10px; height: 10px; box-shadow: 0 0 7px currentColor; }
+
+.bell-count {
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--header-bg), 0 0 9px color-mix(in srgb, var(--danger) 75%, transparent);
+}
+.header-actions .notifications-menu .notification-item {
+  margin: 2px 0;
+  padding: 8px 9px;
+  border: 1px solid transparent;
+  border-left-width: 4px;
+}
+.header-actions .notifications-menu .notification-item.notification-danger {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--danger) 72%, var(--border));
+  background: color-mix(in srgb, var(--danger) 17%, var(--bg-panel));
+}
+.header-actions .notifications-menu .notification-item.notification-warn {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--warn) 72%, var(--border));
+  background: color-mix(in srgb, var(--warn) 17%, var(--bg-panel));
+}
+.header-actions .notifications-menu .notification-item.notification-muted {
+  color: var(--text);
+  border-color: var(--unknown);
+  background: color-mix(in srgb, var(--unknown) 10%, var(--bg-panel));
+}
+.header-actions .notifications-menu .notification-danger .danger { color: var(--danger); font-weight: 500; }
+.header-actions .notifications-menu .notification-warn .warn { color: var(--warn); font-weight: 500; }
+
+/* Вся видимая площадь вкладки реагирует на нажатие. */
+.mode-tab,
+.settings-tab,
+.group-tab,
+.journal-whole { min-height: 38px; cursor: pointer; }
+.mode-tab { display: flex; align-items: center; justify-content: center; }
+.journal-group { cursor: pointer; }
+.journal-group-tabs,
+.journal-group-title { position: relative; z-index: 1; }
+
+/* В шапке показывается короткое Ф.И.О. без обрезки. Полная запись остаётся в
+   подсказке кнопки и в личном кабинете. */
+.account-button {
+  max-width: none;
+  flex: 0 0 auto;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+/* ── Точная настройка после проверки на рабочем экране ────────────────── */
+
+/* Нативный синий цвет Windows не относится к палитре программы. Обычные
+   флажки петроловые, а в системных разделах наследуют цвет своего раздела. */
+input[type='checkbox'],
+input[type='radio'] { accent-color: var(--accent); }
+.group-outside input[type='checkbox'],
+.group-outside input[type='radio'] { accent-color: var(--group-outside); }
+.group-inside input[type='checkbox'],
+.group-inside input[type='radio'] { accent-color: var(--group-inside); }
+.group-automation input[type='checkbox'],
+.group-automation input[type='radio'] { accent-color: var(--group-automation); }
+
+/* В перечне периодических проверок цвет нужен для быстрого считывания срока,
+   но рамки и заливки превращают каждую строку в тяжёлую отдельную карточку. */
+.card-status .status-row.status-ok,
+.card-status .status-row.status-warn,
+.card-status .status-row.status-danger,
+.card-status .status-row.status-unknown {
+  color: var(--text);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.card-status .status-row:hover:not(:disabled) {
+  background: var(--bg-elevated);
+  border-color: transparent;
+}
+.card-status .due-badge { padding: 0; background: transparent; }
+.status-pill .status-dot,
+.status-row .status-dot,
+.status-cell .status-dot,
+.due-dot {
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 35%, transparent);
+}
+
+/* В журнале периодичность читается как лёгкая цветовая отметка. Рамка
+   остаётся только у общего состояния объекта, чтобы таблица не дробилась
+   на десятки конкурирующих плашек. */
+.journal-table .journal-cell .status-cell.status-ok,
+.journal-table .journal-cell .status-cell.status-warn,
+.journal-table .journal-cell .status-cell.status-danger,
+.journal-table .journal-cell .status-cell.status-unknown {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  padding-inline: 5px;
+}
+.journal-table .journal-cell .status-cell:hover:not(:disabled) {
+  border-color: transparent;
+  background: color-mix(in srgb, currentColor 9%, transparent);
+}
+.journal-table .journal-cell .status-cell .status-dot {
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 30%, transparent);
+}
+.bell-count { box-shadow: 0 0 0 2px var(--header-bg); }
+
+/* Разделы дашборда повторяют цвета вкладок журнала, но используют их на
+   большей площади: цвет остаётся различимым и в круге, и в легенде. */
+.dash-card-groups {
+  border-top: 3px solid color-mix(in srgb, var(--group-outside) 45%, var(--group-inside));
+}
+.dash-card-groups .dash-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.dash-group-row {
+  --dash-group-color: var(--accent);
+  padding: 6px 8px;
+  border-left: 4px solid var(--dash-group-color);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--dash-group-color) 13%, var(--bg-panel));
+}
+.dash-group-row.group-outside { --dash-group-color: var(--group-outside); }
+.dash-group-row.group-inside { --dash-group-color: var(--group-inside); }
+.dash-group-row.group-automation { --dash-group-color: var(--group-automation); }
+.dash-group-row .group-dot {
+  width: 11px;
+  height: 11px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--dash-group-color) 48%, transparent);
+}
+.dash-group-row .dash-group-link:hover:not(:disabled) { color: var(--dash-group-color); }
+
+/* Фильтр систем справа использует тот же цветовой язык, что журнал и круг
+   разделов дашборда. */
+.systems-group.group-outside { --system-group-color: var(--group-outside); }
+.systems-group.group-inside { --system-group-color: var(--group-inside); }
+.systems-group.group-automation { --system-group-color: var(--group-automation); }
+.systems-group {
+  border-left-width: 4px;
+  padding: 5px 5px 5px 10px;
+  background: color-mix(in srgb, var(--system-group-color) 7%, transparent);
+}
+.systems-group h4 { color: var(--system-group-color); }

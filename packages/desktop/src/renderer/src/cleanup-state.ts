@@ -2,13 +2,11 @@
  * Состояние очистки в интерфейсе и сборка списка действий для ядра.
  *
  * Порядок действий важен и задаётся здесь один раз:
- *   1. стирание областей, удаление значков и работа с цветом — в координатах
- *      исходной подложки;
- *   2. обрезка — последней.
+ *   1. вырезать рабочую область листа;
+ *   2. все следующие действия выполнять уже внутри этой области;
  *
- * Обрезка идёт последней намеренно. Пользователь обводит легенду и штамп на
- * исходном изображении, и координаты этих областей должны оставаться верными.
- * Если бы обрезка выполнялась первой, все ранее указанные области уехали бы.
+ * Это именно поэтапная подготовка подложки: выбрал нужный фрагмент — дальше
+ * работаешь только с ним, а не продолжаешь чистить весь эвакуационный лист.
  */
 
 import type { CleanupOperation, PixelPoint, PixelRect, RgbColor } from '@izh/contracts';
@@ -26,14 +24,18 @@ export interface ColoredPreset {
  * Три готовые настройки вместо пяти ползунков.
  *
  * «Слабо» — только явно цветное, ничего лишнего не заденет.
- * «Обычно» — плюс кайма сглаживания и значки целиком, вместе с обводкой.
- * «Сильно» — ловит бледные заливки и крупные значки; может задеть цветные
- * подписи, если они есть на чертеже.
+ * «Обычно» — плюс кайма сглаживания.
+ * «Сильно» — ловит бледные заливки; может задеть цветные подписи, если они
+ * есть на чертеже.
+ *
+ * Важно: автоматическая цветная очистка не прорастает в чёрную графику. Чёрная
+ * обводка значка убирается вручную щелчком или областью. Иначе зелёная стрелка,
+ * коснувшаяся стены, съедает стену — для коммерческой подложки это недопустимо.
  */
 export const STRENGTH_PRESETS: Record<CleanupStrength, ColoredPreset> = {
   light: { saturationThreshold: 0.3, haloRadiusPx: 0, symbolGrowthPx: 0 },
-  normal: { saturationThreshold: 0.15, haloRadiusPx: 1, symbolGrowthPx: 6 },
-  strong: { saturationThreshold: 0.08, haloRadiusPx: 2, symbolGrowthPx: 14 },
+  normal: { saturationThreshold: 0.15, haloRadiusPx: 2, symbolGrowthPx: 0 },
+  strong: { saturationThreshold: 0.08, haloRadiusPx: 4, symbolGrowthPx: 0 },
 };
 
 export const STRENGTH_LABELS: Record<CleanupStrength, string> = {
@@ -59,6 +61,10 @@ export interface CleanupState {
   readonly eraseRects: readonly PixelRect[];
   readonly removeColored: boolean;
   readonly strength: CleanupStrength;
+  readonly removeTextLike: boolean;
+  readonly textMaxWidthPx: number;
+  readonly textMaxHeightPx: number;
+  readonly textMaxPixels: number;
   readonly removedColors: readonly RemovedColor[];
   /** Значки, убранные щелчком. Хранятся точки, а не результат. */
   readonly removedComponents: readonly PixelPoint[];
@@ -71,6 +77,10 @@ export const EMPTY_CLEANUP: CleanupState = {
   eraseRects: [],
   removeColored: false,
   strength: 'normal',
+  removeTextLike: false,
+  textMaxWidthPx: 180,
+  textMaxHeightPx: 80,
+  textMaxPixels: 900,
   removedColors: [],
   removedComponents: [],
   keepDark: false,
@@ -81,6 +91,9 @@ export const EMPTY_CLEANUP: CleanupState = {
 export function toOperations(state: CleanupState): CleanupOperation[] {
   const operations: CleanupOperation[] = [];
 
+  if (state.crop !== null) {
+    operations.push({ kind: 'crop', rect: state.crop });
+  }
   for (const rect of state.eraseRects) {
     operations.push({ kind: 'erase-rect', rect });
   }
@@ -90,29 +103,31 @@ export function toOperations(state: CleanupState): CleanupOperation[] {
   if (state.removeColored) {
     operations.push({ kind: 'remove-colored', ...STRENGTH_PRESETS[state.strength] });
   }
+  if (state.removeTextLike) {
+    operations.push({
+      kind: 'remove-small-components',
+      maxWidthPx: state.textMaxWidthPx,
+      maxHeightPx: state.textMaxHeightPx,
+      maxPixels: state.textMaxPixels,
+    });
+  }
   for (const removed of state.removedColors) {
     operations.push({ kind: 'remove-color', color: removed.color, tolerance: removed.tolerance });
   }
   if (state.keepDark) {
     operations.push({ kind: 'keep-dark', luminanceThreshold: state.luminanceThreshold });
   }
-  if (state.crop !== null) {
-    operations.push({ kind: 'crop', rect: state.crop });
-  }
 
   return operations;
 }
 
 /**
- * Список действий для предпросмотра — без обрезки.
- *
- * Обрезка меняет размеры изображения, а предпросмотр должен оставаться в тех же
- * координатах, что и исходная подложка, иначе указанные пользователем области
- * перестанут совпадать с тем, что он видит. Поэтому в предпросмотре обрезка
- * показывается рамкой, а применяется только при сохранении.
+ * Список действий для предпросмотра совпадает с рабочим списком.
+ * Обрезка видна сразу: после выбора нужной области пользователь работает уже
+ * только с ней.
  */
 export function toPreviewOperations(state: CleanupState): CleanupOperation[] {
-  return toOperations({ ...state, crop: null });
+  return toOperations(state);
 }
 
 /** Есть ли что применять. */
@@ -144,6 +159,15 @@ export function fromOperations(operations: readonly CleanupOperation[]): Cleanup
         break;
       case 'remove-colored':
         state = { ...state, removeColored: true, strength: strengthOf(operation) };
+        break;
+      case 'remove-small-components':
+        state = {
+          ...state,
+          removeTextLike: true,
+          textMaxWidthPx: operation.maxWidthPx,
+          textMaxHeightPx: operation.maxHeightPx,
+          textMaxPixels: operation.maxPixels,
+        };
         break;
       case 'remove-color':
         state = {
